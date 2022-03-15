@@ -1,4 +1,3 @@
-import time
 from typing import List
 from numpy import character
 import pygame
@@ -12,7 +11,6 @@ import random
 # - score
 # - hold display
 # - upcoming display
-# - fix instant lose bug (@Piece.align_to_top())
 # - fix full drop
 # - finish typing
 
@@ -60,7 +58,7 @@ class Piece:
     def new_bag() -> List:
         pieces = list(Piece.shapes.keys())
         random.shuffle(pieces)
-        bag = [ Piece(vec(BOARD_DIM[0] >> 1, 5), type) for type in pieces ]
+        bag = deepcopy([ Piece(vec(BOARD_DIM[0] >> 1, 5), type) for type in pieces ])
         for item in bag: item.rotate(random.randint(0,3))
         for item in bag: item.align_to_top()
 
@@ -83,11 +81,21 @@ class Piece:
         return [ square + self.pos for square in self.shape ]
 
     def draw(self, win: pygame.Surface, coords: vec) -> None:
+        # draw on board
         size = max_board_size()
         for square in self.shape:
             pos = (self.pos + square) * size + coords
 
             pygame.draw.rect(win, self.color, (*pos, size+1, size+1))
+
+    def display(self, win: pygame.Surface, x: int, y: int, w: int, h: int) -> None:
+        # display for side
+        # x, y in top left of center square
+        for square in self.shape:
+            posx = x + square[0] * w
+            posy = y + square[1] * h
+            pygame.draw.rect(win, self.color, (ceil(posx), ceil(posy), w, h))
+
     
 
     def rotate(self, dir: int) -> None:
@@ -106,18 +114,13 @@ class Piece:
         return False
 
     def align_to_top(self) -> None:
-        print(repr(self))
         highest_y = min( p.y for p in self.adj_shape() )
-        print(highest_y)
 
         self.pos.y -= highest_y
 
-        print(min( p.y for p in self.adj_shape() ))
 
-        if min( p.y for p in self.adj_shape() ) < 0:
-            raise Exception
+        assert min( p.y for p in self.adj_shape() ) == 0
 
-        print(self.pos)
         # self.pos = vec(BOARD_DIM[0] >> 1, self.pos.y - min( p.y for p in self.adj_shape() ))
 
 
@@ -141,7 +144,8 @@ class TetrisGame:
         self.falling_piece = self.queued_pieces.pop(0)
 
     def draw(self, win: pygame.Surface) -> None:
-        board_dims = (*board_center(), *(x * max_board_size() for x in BOARD_DIM))
+        size = max_board_size()
+        board_dims = (*board_center(), *(x * size for x in BOARD_DIM))
         centered_dims = rect_center(*board_dims)
 
         self.falling_piece.draw(win, vec(centered_dims[:2]))
@@ -149,10 +153,15 @@ class TetrisGame:
         for y, l in enumerate(self.set_pieces):
             for x, color in enumerate(l):
                 if color is not None:
-                    pos = vec(x, y) * max_board_size() + vec(centered_dims[:2])
-                    pygame.draw.rect(win, color, (*pos, ceil(max_board_size()), ceil(max_board_size())))
+                    pos = vec(x, y) * size + vec(centered_dims[:2])
+                    pygame.draw.rect(win, color, (*pos, ceil(size), ceil(size)))
 
         pygame.draw.rect(win, 'Dark Gray', centered_dims, 3)
+
+        if self.held_piece is not None:
+            x = board_center()[0] - size * (BOARD_DIM[0]/2 + 1)
+            y = board_center()[1]
+            self.held_piece.display(win, x, y, size/2, size/2)
     
     def step(self):
         if self.paused: return
@@ -217,22 +226,23 @@ class TetrisGame:
                     pass
 
     def hold(self) -> None:
-        print(self.held_piece)
         if not self.can_hold: return
-        if self.held_piece is not None:
-            self.falling_piece, self.held_piece = self.held_piece, self.falling_piece
-            self.falling_piece.align_to_top()
-        else:
+        self.can_hold = False
+
+        if self.held_piece is None:
             self.held_piece = deepcopy(self.falling_piece)
             self.falling_piece = self.queued_pieces.pop(0)
+            return
 
-        self.can_hold = False
+        self.falling_piece, self.held_piece = self.held_piece, self.falling_piece
+        self.falling_piece.align_to_top()
+        
 
                 
 
 
 
-'''MAIN'''
+'''----------------MAIN----------------'''
 
 pygame.init()
 pygame.display.init()
