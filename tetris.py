@@ -1,5 +1,4 @@
 from typing import List
-from numpy import character
 import pygame
 # import pygame.freetype
 from pygame.math import Vector2 as vec
@@ -9,15 +8,15 @@ import random
 
 # TODO List:
 # - score
-# - hold display
-# - upcoming display
 # - fix full drop
+# - tidy up piece display 
 # - finish typing
 
 
 FPS = 60
 
 BOARD_DIM = (10, 20)
+PIECE_DISP_SCALE = 0.75
 
 keys = {32: 'SPACE', 13: 'RETURN', 113: 'Q', 119: 'W', 101: 'E', 114: 'R', 116: 'T', 121: 'Y', 117: 'U', 105: 'I', 111: 'O', 112: 'P', 97: 'A', 115: 'S', 100: 'D', 1073742053: 'RSHIFT', 102: 'F', 103: 'G', 104: 'H', 106: 'J', 107: 'K', 108: 'L', 122: 'Z', 120: 'X', 99: 'C', 118: 'V', 98: 'B', 110: 'N', 109: 'M', 49: '1', 50: '2', 51: '3', 52: '4', 53: '5', 54: '6', 55: '7', 56: '8', 57: '9', 48: '0', 44: ',', 46: '.', 59: ';', 47: '/', 39: "'", 91: '[', 93: ']', 92: '\\', 45: '-', 61: '=', 9: 'TAB', 8: 'BACKSPACE', 1073742049: 'LSHIFT', 96: '`', 1073741906: 'UP', 1073741905: 'DOWN', 1073741903: 'RIGHT', 1073741904: 'LEFT', 27: 'ESCAPE'}
 
@@ -29,10 +28,12 @@ def max_board_size():
     '''Returns board scale factor'''
     win_size = tuple(x * 0.9 for x in pygame.display.get_window_size())
 
-    if win_size[0] / BOARD_DIM[0] >= win_size[1] / BOARD_DIM[1]: # y is limiting
-        return win_size[1] / BOARD_DIM[1]
-    else:
-        return win_size[0] / BOARD_DIM[0]
+    return min(win_size[0] / (BOARD_DIM[0] + 12 * PIECE_DISP_SCALE),
+               win_size[1] / BOARD_DIM[1])
+    # if win_size[0] / BOARD_DIM[0] >= win_size[1] / BOARD_DIM[1]: # y is limiting
+    #     return win_size[1] / BOARD_DIM[1]
+    # else:
+    #     return win_size[0] / BOARD_DIM[0]
 
 def board_center():
     return vec(*(x/2 for x in pygame.display.get_window_size()),)
@@ -64,7 +65,7 @@ class Piece:
 
         return bag
 
-    def __init__(self, pos: vec, type: character) -> None:
+    def __init__(self, pos: vec, type: str) -> None:
         self.pos = pos
         self.shape = Piece.shapes[type]['points']
         self.center = Piece.shapes[type]['center']
@@ -88,13 +89,14 @@ class Piece:
 
             pygame.draw.rect(win, self.color, (*pos, size+1, size+1))
 
-    def display(self, win: pygame.Surface, x: int, y: int, w: int, h: int) -> None:
+    def display(self, win: pygame.Surface, x: float, y: float, w: float, h: float) -> None:
         # display for side
         # x, y in top left of center square
+        x, y, w, h = map(ceil, (x, y, w, h))
         for square in self.shape:
             posx = x + square[0] * w
             posy = y + square[1] * h
-            pygame.draw.rect(win, self.color, (ceil(posx), ceil(posy), w, h))
+            pygame.draw.rect(win, self.color, (posx, posy, w, h))
 
     
 
@@ -159,9 +161,14 @@ class TetrisGame:
         pygame.draw.rect(win, 'Dark Gray', centered_dims, 3)
 
         if self.held_piece is not None:
-            x = board_center()[0] - size * (BOARD_DIM[0]/2 + 1)
-            y = board_center()[1]
-            self.held_piece.display(win, x, y, size/2, size/2)
+            x = board_center()[0] - size * (BOARD_DIM[0]/2 + 3)
+            y = board_center()[1] - size * (BOARD_DIM[0]/2 + 2)
+            self.held_piece.display(win, x, y, size * PIECE_DISP_SCALE, size * PIECE_DISP_SCALE)
+
+        for ind, piece in enumerate(self.queued_pieces[:3]):
+            x = board_center()[0] + size * (BOARD_DIM[0]/2 + 3)
+            y = board_center()[1] - size * (BOARD_DIM[0]/2 + 2 - ind * 4)
+            piece.display(win, x, y, size * PIECE_DISP_SCALE, size * PIECE_DISP_SCALE)
     
     def step(self):
         if self.paused: return
