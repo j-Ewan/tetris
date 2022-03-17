@@ -30,10 +30,6 @@ def max_board_size():
 
     return min(win_size[0] / (BOARD_DIM[0] + 12 * PIECE_DISP_SCALE),
                win_size[1] / BOARD_DIM[1])
-    # if win_size[0] / BOARD_DIM[0] >= win_size[1] / BOARD_DIM[1]: # y is limiting
-    #     return win_size[1] / BOARD_DIM[1]
-    # else:
-    #     return win_size[0] / BOARD_DIM[0]
 
 def board_center():
     return vec(*(x/2 for x in pygame.display.get_window_size()),)
@@ -116,15 +112,12 @@ class Piece:
         return False
 
     def align_to_top(self) -> None:
+
+        self.pos.x = BOARD_DIM[0] >> 1
+
         highest_y = min( p.y for p in self.adj_shape() )
 
         self.pos.y -= highest_y
-
-
-        assert min( p.y for p in self.adj_shape() ) == 0
-
-        # self.pos = vec(BOARD_DIM[0] >> 1, self.pos.y - min( p.y for p in self.adj_shape() ))
-
 
 
 
