@@ -1,6 +1,5 @@
 from typing import List
 import pygame
-# import pygame.freetype
 from pygame.math import Vector2 as vec
 from math import ceil
 from copy import deepcopy
@@ -8,7 +7,6 @@ import random
 
 # TODO List:
 # - score
-# - fix full drop
 # - tidy up piece display 
 # - finish typing
 
@@ -24,7 +22,7 @@ def nums_to_keys(nums):
     return [ keys[num] for num in nums if num in keys]
 
 
-def max_board_size():
+def scale_factor():
     '''Returns board scale factor'''
     win_size = tuple(x * 0.9 for x in pygame.display.get_window_size())
 
@@ -79,7 +77,7 @@ class Piece:
 
     def draw(self, win: pygame.Surface, coords: vec) -> None:
         # draw on board
-        size = max_board_size()
+        size = scale_factor()
         for square in self.shape:
             pos = (self.pos + square) * size + coords
 
@@ -124,7 +122,6 @@ class Piece:
 class TetrisGame:
     def __init__(self) -> None:
         self.size = BOARD_DIM
-        self.points = 0
         self.set_pieces = [ [ None ] * BOARD_DIM[0] for _ in range(BOARD_DIM[1]) ] # 2d array of colors
         self.falling_piece: Piece = None
         self.queued_pieces = []
@@ -133,13 +130,16 @@ class TetrisGame:
         self.since_fall = 0
         self.paused = False
         self.can_hold = True
+        self.level = 0
+        self.score = 0
+        self.lines_to_lvl = 0
 
 
         self.queued_pieces.extend(Piece.new_bag())
         self.falling_piece = self.queued_pieces.pop(0)
 
     def draw(self, win: pygame.Surface) -> None:
-        size = max_board_size()
+        size = scale_factor()
         board_dims = (*board_center(), *(x * size for x in BOARD_DIM))
         centered_dims = rect_center(*board_dims)
 
@@ -162,6 +162,10 @@ class TetrisGame:
             x = board_center()[0] + size * (BOARD_DIM[0]/2 + 3)
             y = board_center()[1] - size * (BOARD_DIM[0]/2 + 2 - ind * 4)
             piece.display(win, x, y, size * PIECE_DISP_SCALE, size * PIECE_DISP_SCALE)
+
+        font = pygame.freetype.Font("./arcadepix/ARCADEPI.TTF", round( size, -1 ))
+        font.render_to(win, (10, 10, 100, 100), str(self.score), "#FFFFFF")
+        
     
     def step(self):
         if self.paused: return
@@ -198,11 +202,27 @@ class TetrisGame:
         return self.move_falling( vec(0, 1) )
 
     def line_clear(self):
+        lines = 0
         for i, row in enumerate(self.set_pieces):
             if all(row): # bool(None) == False, bool("color") == True
-                self.set_pieces[i] = [ None ] * BOARD_DIM[0]
-                for r in range(i, 0, -1): # shift lines down bottom to top
-                    self.set_pieces[r], self.set_pieces[r-1] = self.set_pieces[r-1], self.set_pieces[r] # swap each
+                lines += 1
+                self.lines_to_lvl += 1
+                self.set_pieces.pop(i)
+                self.set_pieces.insert(0, [ None ] * BOARD_DIM[0])
+        if lines == 0:
+            return
+        if lines == 1:
+            self.score += 100 * self.level
+        elif lines == 2:
+            self.score += 300 * self.level
+        elif lines == 3:
+            self.score += 500 * self.level
+        elif lines == 4:
+            self.score += 800 * self.level
+        if self.lines_to_lvl >= 10:
+            self.level += 1
+            self.lines_to_lvl -= 10
+        
 
     def handle_inputs(self, inputs: List[str]) -> None:
         if 'ESCAPE' in inputs:
@@ -221,9 +241,11 @@ class TetrisGame:
                 self.move_falling(1, 'ROTATE')
             if inp in ['S', 'DOWN']:
                 self.since_fall = 0
+                self.score += 1
             if inp == 'SPACE':
                 while self.fall():
-                    pass
+                    self.score += 2
+                self.since_fall = 0
 
     def hold(self) -> None:
         if not self.can_hold: return
