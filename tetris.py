@@ -6,7 +6,7 @@ from copy import deepcopy
 import random
 
 # TODO List:
-# - score
+# - variable speed
 # - tidy up piece display 
 # - finish typing
 
@@ -19,7 +19,7 @@ PIECE_DISP_SCALE = 0.75
 keys = {32: 'SPACE', 13: 'RETURN', 113: 'Q', 119: 'W', 101: 'E', 114: 'R', 116: 'T', 121: 'Y', 117: 'U', 105: 'I', 111: 'O', 112: 'P', 97: 'A', 115: 'S', 100: 'D', 1073742053: 'RSHIFT', 102: 'F', 103: 'G', 104: 'H', 106: 'J', 107: 'K', 108: 'L', 122: 'Z', 120: 'X', 99: 'C', 118: 'V', 98: 'B', 110: 'N', 109: 'M', 49: '1', 50: '2', 51: '3', 52: '4', 53: '5', 54: '6', 55: '7', 56: '8', 57: '9', 48: '0', 44: ',', 46: '.', 59: ';', 47: '/', 39: "'", 91: '[', 93: ']', 92: '\\', 45: '-', 61: '=', 9: 'TAB', 8: 'BACKSPACE', 1073742049: 'LSHIFT', 96: '`', 1073741906: 'UP', 1073741905: 'DOWN', 1073741903: 'RIGHT', 1073741904: 'LEFT', 27: 'ESCAPE'}
 
 def nums_to_keys(nums):
-    return [ keys[num] for num in nums if num in keys]
+    return [ keys[num] for num in nums if num in keys ]
 
 
 def scale_factor():
@@ -27,15 +27,10 @@ def scale_factor():
     win_size = tuple(x * 0.9 for x in pygame.display.get_window_size())
 
     return min(win_size[0] / (BOARD_DIM[0] + 12 * PIECE_DISP_SCALE),
-               win_size[1] / BOARD_DIM[1])
+               win_size[1] / (BOARD_DIM[1] + 2))
 
 def board_center():
     return vec(*(x/2 for x in pygame.display.get_window_size()),)
-
-def rect_center(x, y, w, h):
-    x -= w / 2
-    y -= h / 2
-    return pygame.Rect(x, y, w, h)
 
 
 class Piece:
@@ -140,31 +135,47 @@ class TetrisGame:
 
     def draw(self, win: pygame.Surface) -> None:
         size = scale_factor()
-        board_dims = (*board_center(), *(x * size for x in BOARD_DIM))
-        centered_dims = rect_center(*board_dims)
+        center = board_center()
+        board_dims = pygame.Rect(*center, *(x * size for x in BOARD_DIM))
+        board_dims.center = center
 
-        self.falling_piece.draw(win, vec(centered_dims[:2]))
+        self.falling_piece.draw(win, vec(board_dims[:2]))
 
         for y, l in enumerate(self.set_pieces):
             for x, color in enumerate(l):
                 if color is not None:
-                    pos = vec(x, y) * size + vec(centered_dims[:2])
+                    pos = vec(x, y) * size + vec(board_dims[:2])
                     pygame.draw.rect(win, color, (*pos, ceil(size), ceil(size)))
 
-        pygame.draw.rect(win, 'Dark Gray', centered_dims, 3)
+        pygame.draw.rect(win, 'Dark Gray', board_dims, 3)
 
         if self.held_piece is not None:
-            x = board_center()[0] - size * (BOARD_DIM[0]/2 + 3)
-            y = board_center()[1] - size * (BOARD_DIM[0]/2 + 2)
+            x = center[0] - size * (BOARD_DIM[0]/2 + 3)
+            y = center[1] - size * (BOARD_DIM[0]/2 + 2)
             self.held_piece.display(win, x, y, size * PIECE_DISP_SCALE, size * PIECE_DISP_SCALE)
 
         for ind, piece in enumerate(self.queued_pieces[:3]):
-            x = board_center()[0] + size * (BOARD_DIM[0]/2 + 3)
-            y = board_center()[1] - size * (BOARD_DIM[0]/2 + 2 - ind * 4)
+            x = center[0] + size * (BOARD_DIM[0]/2 + 3)
+            y = center[1] - size * (BOARD_DIM[0]/2 + 2 - ind * 4)
             piece.display(win, x, y, size * PIECE_DISP_SCALE, size * PIECE_DISP_SCALE)
 
-        font = pygame.freetype.Font("./arcadepix/ARCADEPI.TTF", round( size, -1 ))
-        font.render_to(win, (10, 10, 100, 100), str(self.score), "#FFFFFF")
+        font_size = round( size, -1 ) if size > 5 else 1
+        font = pygame.freetype.Font("./arcadepix/ARCADEPI.TTF", font_size)
+        score_rect = font.get_rect(str(self.score), size = font_size)
+        
+        x = ceil(center[0] - size * (BOARD_DIM[0]/2))
+        y = ceil(center[1] - size * (BOARD_DIM[0]) + 0.25)
+        score_rect.bottomleft = (x, y)
+
+        font.render_to(win, score_rect, str(self.score), "#FFFFFF")
+
+        lvl_rect = font.get_rect(str(self.level), size = font_size)
+        
+        x = ceil(center[0] + size * (BOARD_DIM[0]/2))
+        y = ceil(center[1] - size * (BOARD_DIM[0]) + 0.25)
+        lvl_rect.bottomright = (x, y)
+
+        font.render_to(win, lvl_rect, str(self.level), "#FFFFFF")
         
     
     def step(self):
@@ -212,13 +223,13 @@ class TetrisGame:
         if lines == 0:
             return
         if lines == 1:
-            self.score += 100 * self.level
+            self.score += 100 * (self.level + 1)
         elif lines == 2:
-            self.score += 300 * self.level
+            self.score += 300 * (self.level + 1)
         elif lines == 3:
-            self.score += 500 * self.level
+            self.score += 500 * (self.level + 1)
         elif lines == 4:
-            self.score += 800 * self.level
+            self.score += 800 * (self.level + 1)
         if self.lines_to_lvl >= 10:
             self.level += 1
             self.lines_to_lvl -= 10
@@ -246,6 +257,8 @@ class TetrisGame:
                 while self.fall():
                     self.score += 2
                 self.since_fall = 0
+            if inp == 'R':
+                self.__init__()
 
     def hold(self) -> None:
         if not self.can_hold: return
@@ -270,7 +283,7 @@ pygame.init()
 pygame.display.init()
 # pygame.font.init()
 
-win = pygame.display.set_mode((1000, 1000), pygame.RESIZABLE)
+win = pygame.display.set_mode((1000, 1000), pygame.RESIZABLE, vsync=1)
 pygame.display.set_caption('Tetris')
 
 clock = pygame.time.Clock()
