@@ -4,10 +4,16 @@ from pygame.math import Vector2 as vec
 from math import ceil
 from copy import deepcopy
 import random
+import os
 
 # TODO List:
-# - variable speed
+# - kickback
+# - lose screen
+# - highscore
+# - controls
+# - t-spin detection
 # - tidy up piece display 
+# - main screen?
 # - finish typing
 
 
@@ -16,10 +22,12 @@ FPS = 60
 BOARD_DIM = (10, 20)
 PIECE_DISP_SCALE = 0.75
 
-keys = {32: 'SPACE', 13: 'RETURN', 113: 'Q', 119: 'W', 101: 'E', 114: 'R', 116: 'T', 121: 'Y', 117: 'U', 105: 'I', 111: 'O', 112: 'P', 97: 'A', 115: 'S', 100: 'D', 1073742053: 'RSHIFT', 102: 'F', 103: 'G', 104: 'H', 106: 'J', 107: 'K', 108: 'L', 122: 'Z', 120: 'X', 99: 'C', 118: 'V', 98: 'B', 110: 'N', 109: 'M', 49: '1', 50: '2', 51: '3', 52: '4', 53: '5', 54: '6', 55: '7', 56: '8', 57: '9', 48: '0', 44: ',', 46: '.', 59: ';', 47: '/', 39: "'", 91: '[', 93: ']', 92: '\\', 45: '-', 61: '=', 9: 'TAB', 8: 'BACKSPACE', 1073742049: 'LSHIFT', 96: '`', 1073741906: 'UP', 1073741905: 'DOWN', 1073741903: 'RIGHT', 1073741904: 'LEFT', 27: 'ESCAPE'}
+KEYS = {32: 'SPACE', 13: 'RETURN', 113: 'Q', 119: 'W', 101: 'E', 114: 'R', 116: 'T', 121: 'Y', 117: 'U', 105: 'I', 111: 'O', 112: 'P', 97: 'A', 115: 'S', 100: 'D', 1073742053: 'RSHIFT', 102: 'F', 103: 'G', 104: 'H', 106: 'J', 107: 'K', 108: 'L', 122: 'Z', 120: 'X', 99: 'C', 118: 'V', 98: 'B', 110: 'N', 109: 'M', 49: '1', 50: '2', 51: '3', 52: '4', 53: '5', 54: '6', 55: '7', 56: '8', 57: '9', 48: '0', 44: ',', 46: '.', 59: ';', 47: '/', 39: "'", 91: '[', 93: ']', 92: '\\', 45: '-', 61: '=', 9: 'TAB', 8: 'BACKSPACE', 1073742049: 'LSHIFT', 96: '`', 1073741906: 'UP', 1073741905: 'DOWN', 1073741903: 'RIGHT', 1073741904: 'LEFT', 27: 'ESCAPE'}
+
+FONT_FILE = os.path.join(os.path.dirname(__file__), 'arcadepix', 'ARCADEPI.TTF')
 
 def nums_to_keys(nums):
-    return [ keys[num] for num in nums if num in keys ]
+    return [ KEYS[num] for num in nums if num in KEYS ]
 
 
 def scale_factor():
@@ -121,7 +129,6 @@ class TetrisGame:
         self.falling_piece: Piece = None
         self.queued_pieces = []
         self.held_piece: Piece = None
-        self.speed = 20 # big num = slower
         self.since_fall = 0
         self.paused = False
         self.can_hold = True
@@ -160,7 +167,7 @@ class TetrisGame:
             piece.display(win, x, y, size * PIECE_DISP_SCALE, size * PIECE_DISP_SCALE)
 
         font_size = round( size, -1 ) if size > 5 else 1
-        font = pygame.freetype.Font("./arcadepix/ARCADEPI.TTF", font_size)
+        font = pygame.freetype.Font(FONT_FILE, font_size)
         score_rect = font.get_rect(str(self.score), size = font_size)
         
         x = ceil(center[0] - size * (BOARD_DIM[0]/2))
@@ -180,7 +187,8 @@ class TetrisGame:
     
     def step(self):
         if self.paused: return
-        if self.since_fall % self.speed < 1:
+        speed = 0.03 + 0.01 * self.level
+        if self.since_fall % (1/speed) < 1:
             if not self.fall():    # piece lands
                 for p in self.falling_piece.adj_shape():
                     self.set_pieces[int(p.y)][int(p.x)] = self.falling_piece.color # store colors in 2d array
@@ -281,7 +289,7 @@ class TetrisGame:
 
 pygame.init()
 pygame.display.init()
-# pygame.font.init()
+pygame.font.init()
 
 win = pygame.display.set_mode((1000, 1000), pygame.RESIZABLE, vsync=1)
 pygame.display.set_caption('Tetris')
