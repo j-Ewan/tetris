@@ -1,4 +1,3 @@
-from typing import List
 import pygame
 from pygame.math import Vector2 as vec
 from math import ceil
@@ -14,7 +13,6 @@ import os
 # - t-spin detection
 # - tidy up piece display 
 # - main screen?
-# - finish typing
 
 
 FPS = 60
@@ -43,21 +41,21 @@ def board_center():
 
 class Piece:
     shapes = { # relative distance from center
-        'I': {'points': [ vec(-1, 0), vec(0, 0), vec(1, 0), vec(2, 0) ], 'center': vec(0, 0), 'color': '#00BFFF' },
-        'J': {'points': [ vec(-1, -1), vec(0, -1), vec(0, 0), vec(0, 1) ], 'center': vec(0, 0), 'color': '#0000FF' },
-        'L': {'points': [ vec(-1, -1), vec(-1, 0), vec(0, 0), vec(1, 0) ], 'center': vec(0, 0), 'color': '#FF7700' },
+        'I': {'points': [ vec(-1, 0), vec(0, 0), vec(1, 0), vec(2, 0) ], 'center': vec(0.5, 0.5), 'color': '#00BFFF' },
+        'J': {'points': [ vec(-1, -1), vec(-1, 0), vec(0, 0), vec(1, 0) ], 'center': vec(0, 0), 'color': '#0000FF' },
+        'L': {'points': [ vec(-1, 0), vec(0, 0), vec(1, 0), vec(1, -1) ], 'center': vec(0, 0), 'color': '#FF7700' },
         'O': {'points': [ vec(0, 0), vec(0, 1), vec(1, 0), vec(1, 1) ], 'center': vec(0.5, 0.5), 'color': '#FFFF00' },
         'S': {'points': [ vec(-1, -1), vec(0, -1), vec(0, 0), vec(1, 0) ], 'center': vec(0, 0), 'color': '#00FF00' }, 
-        'T': {'points': [ vec(-1, 0), vec(0, 0), vec(0, 1), vec(1, 0) ], 'center': vec(0, 0), 'color': '#9900FF' },
-        'Z': {'points': [ vec(-1, -1), vec(-1, 0), vec(0, 0), vec(0, 1) ], 'center': vec(0, 0), 'color': '#FF0000' }
+        'T': {'points': [ vec(-1, 0), vec(0, 0), vec(0, -1), vec(1, 0) ], 'center': vec(0, 0), 'color': '#9900FF' },
+        'Z': {'points': [ vec(-1, -1), vec(0, -1), vec(0, 0), vec(1, 0) ], 'center': vec(0, 0), 'color': '#FF0000' }
     }
 
     @staticmethod
-    def new_bag() -> List:
+    def new_bag():
         pieces = list(Piece.shapes.keys())
         random.shuffle(pieces)
-        bag = deepcopy([ Piece(vec(BOARD_DIM[0] >> 1, 5), type) for type in pieces ])
-        for item in bag: item.rotate(random.randint(0,3))
+        bag = deepcopy([ Piece(vec(0, 0), type) for type in pieces ])
+        # for item in bag: item.rotate(random.randint(0,3))
         for item in bag: item.align_to_top()
 
         return bag
@@ -68,14 +66,15 @@ class Piece:
         self.center = Piece.shapes[type]['center']
         self.color = Piece.shapes[type]['color']
         self.type = type
+        self.rotation = 0
 
     def __repr__(self) -> str:
         return "Piece: points at {points} with color {color}".format(points=[tuple(v) for v in self.adj_shape()], color=self.color)
 
     def __str__(self) -> str:
-        return f"{self.type} piece at {tuple(self.pos)}"
+        return f"{self.type} piece at {tuple(self.pos)} rotated {self.rotation}"
 
-    def adj_shape(self) -> List[vec]:
+    def adj_shape(self):
         return [ square + self.pos for square in self.shape ]
 
     def draw(self, win: pygame.Surface, coords: vec) -> None:
@@ -98,13 +97,15 @@ class Piece:
     
 
     def rotate(self, dir: int) -> None:
+        self.rotation += dir
+        self.rotation %= 4
         for i, p in enumerate(self.shape):
             p -= self.center
             p = p.rotate(90 * dir)
             p += self.center
             self.shape[i] = p
 
-    def check_collision(self, pieces: List) -> bool:
+    def check_collision(self, pieces) -> bool:
         for square in self.adj_shape():
             if square[0] not in range(BOARD_DIM[0]) or square[1] not in range(BOARD_DIM[1]):
                 return True
@@ -114,7 +115,7 @@ class Piece:
 
     def align_to_top(self) -> None:
 
-        self.pos.x = BOARD_DIM[0] >> 1
+        self.pos.x = (BOARD_DIM[0] >> 1) - 1
 
         highest_y = min( p.y for p in self.adj_shape() )
 
@@ -171,7 +172,7 @@ class TetrisGame:
         score_rect = font.get_rect(str(self.score), size = font_size)
         
         x = ceil(center[0] - size * (BOARD_DIM[0]/2))
-        y = ceil(center[1] - size * (BOARD_DIM[0]) + 0.25)
+        y = ceil(center[1] - size * (BOARD_DIM[0]) + 0.5)
         score_rect.bottomleft = (x, y)
 
         font.render_to(win, score_rect, str(self.score), "#FFFFFF")
@@ -179,7 +180,7 @@ class TetrisGame:
         lvl_rect = font.get_rect(str(self.level), size = font_size)
         
         x = ceil(center[0] + size * (BOARD_DIM[0]/2))
-        y = ceil(center[1] - size * (BOARD_DIM[0]) + 0.25)
+        y = ceil(center[1] - size * (BOARD_DIM[0]) + 0.5)
         lvl_rect.bottomright = (x, y)
 
         font.render_to(win, lvl_rect, str(self.level), "#FFFFFF")
@@ -198,6 +199,7 @@ class TetrisGame:
                     self.queued_pieces.extend(Piece.new_bag())
                 if self.falling_piece.check_collision(self.set_pieces):
                     print('Lose', self.falling_piece, self.falling_piece.adj_shape())
+                    print(self.score, 'points')
                     self.__init__()
 
                 self.line_clear()
@@ -243,7 +245,7 @@ class TetrisGame:
             self.lines_to_lvl -= 10
         
 
-    def handle_inputs(self, inputs: List[str]) -> None:
+    def handle_inputs(self, inputs) -> None:
         if 'ESCAPE' in inputs:
             self.paused = not self.paused
         if self.paused: return
@@ -279,6 +281,24 @@ class TetrisGame:
 
         self.falling_piece, self.held_piece = self.held_piece, self.falling_piece
         self.falling_piece.align_to_top()
+
+    def rotate_wall_kick(self, piece: Piece, rot):
+        tables = {
+            (0, 1): [vec(0, 0), vec(-1, 0), vec(-1, -1), vec(0, 2), vec(-1, 2)],
+            (1, -1): [vec(0, 0), vec(1, 0), vec(1, 1), vec(0, -2), vec(1, -2)],
+            (1, 1): [vec(0, 0), vec(1, 0), vec(1, 1), vec(0, -2), vec(1, -2)],
+            (2, -1): [vec(0, 0), vec(-1, 0), vec(-1, -1), vec(0, 2), vec(-1, 2)],
+            (2, 1): [vec(0, 0), vec(1, 0), vec(1, -1), vec(0, 2), vec(1, 2)],
+            (3, -1): [vec(0, 0), vec(-1, 0), vec(-1, 1), vec(0, -2), vec(-1, -2)],
+            (3, 1): [vec(0, 0), vec(-1, 0), vec(-1, 1), vec(0, -2), vec(-1, -2)],
+            (0, -1): [vec(0, 0), vec(1, 0), vec(1, -1), vec(0, 2), vec(1, 2)],
+        }
+
+        i_tables = {
+
+        }
+
+        tests = tables[(piece.rotation, rot)]
         
 
                 
