@@ -6,7 +6,6 @@ import random
 import os
 
 # TODO List:
-# - kickback
 # - lose screen
 # - highscore
 # - controls
@@ -45,7 +44,7 @@ class Piece:
         'J': {'points': [ vec(-1, -1), vec(-1, 0), vec(0, 0), vec(1, 0) ], 'center': vec(0, 0), 'color': '#0000FF' },
         'L': {'points': [ vec(-1, 0), vec(0, 0), vec(1, 0), vec(1, -1) ], 'center': vec(0, 0), 'color': '#FF7700' },
         'O': {'points': [ vec(0, 0), vec(0, 1), vec(1, 0), vec(1, 1) ], 'center': vec(0.5, 0.5), 'color': '#FFFF00' },
-        'S': {'points': [ vec(-1, -1), vec(0, -1), vec(0, 0), vec(1, 0) ], 'center': vec(0, 0), 'color': '#00FF00' }, 
+        'S': {'points': [ vec(-1, 0), vec(0, 0), vec(0, -1), vec(1, -1) ], 'center': vec(0, 0), 'color': '#00FF00' }, 
         'T': {'points': [ vec(-1, 0), vec(0, 0), vec(0, -1), vec(1, 0) ], 'center': vec(0, 0), 'color': '#9900FF' },
         'Z': {'points': [ vec(-1, -1), vec(0, -1), vec(0, 0), vec(1, 0) ], 'center': vec(0, 0), 'color': '#FF0000' }
     }
@@ -205,19 +204,55 @@ class TetrisGame:
                 self.line_clear()
         self.since_fall += 1
 
-    def move_falling(self, dir, move='TRANSLATE'):
+    def move_falling(self, dir):
         test_piece = deepcopy(self.falling_piece)
-
-        if move == 'TRANSLATE':
-            test_piece.pos += dir
-        elif move == 'ROTATE':
-            test_piece.rotate(dir)
+        test_piece.pos += dir
         
         if test_piece.check_collision(self.set_pieces):
             return False
 
         self.falling_piece = test_piece
         return True
+
+    def rotate_falling(self, rot):
+        tables = {
+            (0, 1): [vec(0, 0), vec(-1, 0), vec(-1, -1), vec(0, 2), vec(-1, 2)],
+            (1, -1): [vec(0, 0), vec(1, 0), vec(1, 1), vec(0, -2), vec(1, -2)],
+            (1, 1): [vec(0, 0), vec(1, 0), vec(1, 1), vec(0, -2), vec(1, -2)],
+            (2, -1): [vec(0, 0), vec(-1, 0), vec(-1, -1), vec(0, 2), vec(-1, 2)],
+            (2, 1): [vec(0, 0), vec(1, 0), vec(1, -1), vec(0, 2), vec(1, 2)],
+            (3, -1): [vec(0, 0), vec(-1, 0), vec(-1, 1), vec(0, -2), vec(-1, -2)],
+            (3, 1): [vec(0, 0), vec(-1, 0), vec(-1, 1), vec(0, -2), vec(-1, -2)],
+            (0, -1): [vec(0, 0), vec(1, 0), vec(1, -1), vec(0, 2), vec(1, 2)]
+        }
+
+        i_tables = {
+            (0, 1): [vec(0, 0), vec(-2, 0), vec(1, 0), vec(-2, 1), vec(1, -2)], #
+            (1, -1): [vec(0, 0), vec(2, 0), vec(-1, 0), vec(2, -1), vec(-1, 2)], #
+            (1, 1): [vec(0, 0), vec(-1, 0), vec(2, 0), vec(-1, -2), vec(2, 1)], #
+            (2, -1): [vec(0, 0), vec(1, 0), vec(-2, 0), vec(1, 2), vec(-2, -1)], #
+            (2, 1): [vec(0, 0), vec(2, 0), vec(-1, 0), vec(2, -1), vec(-1, 2)], # 
+            (3, -1): [vec(0, 0), vec(-2, 0), vec(1, 0), vec(-2, 1), vec(1, -2)],
+            (3, 1): [vec(0, 0), vec(1, 0), vec(-2, 0), vec(1, 2), vec(-2, -1)],
+            (0, -1): [vec(0, 0), vec(-1, 0), vec(2, 0), vec(-1, -2), vec(2, 1)]
+        }
+
+        if self.falling_piece.type == 'I':
+            tests = i_tables[(self.falling_piece.rotation, rot)]
+        else:
+            tests = tables[(self.falling_piece.rotation, rot)]
+
+        test_piece = deepcopy(self.falling_piece)
+        test_piece.rotate(rot)
+
+        for pos in tests:
+            test_piece.pos = self.falling_piece.pos + pos
+            if not test_piece.check_collision(self.set_pieces):
+                self.falling_piece = deepcopy(test_piece)
+                return True
+        else:
+            print('Couldn\'t spin %s towards %s' % (self.falling_piece, rot))
+        return False
     
     def fall(self):
         return self.move_falling( vec(0, 1) )
@@ -257,9 +292,9 @@ class TetrisGame:
             if inp in ['A', 'LEFT']:
                 self.move_falling( vec(-1, 0) )
             if inp == 'Z':
-                self.move_falling(-1, 'ROTATE')
+                self.rotate_falling(-1)
             if inp in ['X', 'UP']:
-                self.move_falling(1, 'ROTATE')
+                self.rotate_falling(1)
             if inp in ['S', 'DOWN']:
                 self.since_fall = 0
                 self.score += 1
@@ -269,6 +304,8 @@ class TetrisGame:
                 self.since_fall = 0
             if inp == 'R':
                 self.__init__()
+            if inp == 'P':
+                print(self.falling_piece)
 
     def hold(self) -> None:
         if not self.can_hold: return
@@ -282,23 +319,6 @@ class TetrisGame:
         self.falling_piece, self.held_piece = self.held_piece, self.falling_piece
         self.falling_piece.align_to_top()
 
-    def rotate_wall_kick(self, piece: Piece, rot):
-        tables = {
-            (0, 1): [vec(0, 0), vec(-1, 0), vec(-1, -1), vec(0, 2), vec(-1, 2)],
-            (1, -1): [vec(0, 0), vec(1, 0), vec(1, 1), vec(0, -2), vec(1, -2)],
-            (1, 1): [vec(0, 0), vec(1, 0), vec(1, 1), vec(0, -2), vec(1, -2)],
-            (2, -1): [vec(0, 0), vec(-1, 0), vec(-1, -1), vec(0, 2), vec(-1, 2)],
-            (2, 1): [vec(0, 0), vec(1, 0), vec(1, -1), vec(0, 2), vec(1, 2)],
-            (3, -1): [vec(0, 0), vec(-1, 0), vec(-1, 1), vec(0, -2), vec(-1, -2)],
-            (3, 1): [vec(0, 0), vec(-1, 0), vec(-1, 1), vec(0, -2), vec(-1, -2)],
-            (0, -1): [vec(0, 0), vec(1, 0), vec(1, -1), vec(0, 2), vec(1, 2)],
-        }
-
-        i_tables = {
-
-        }
-
-        tests = tables[(piece.rotation, rot)]
         
 
                 
