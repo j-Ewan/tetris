@@ -190,8 +190,15 @@ class TetrisGame:
         speed = 0.03 + 0.01 * self.level
         if self.since_fall % (1/speed) < 1:
             if not self.fall():    # piece lands
+                tspin = False
+                if self.falling_piece.type == 'T':
+                    tspin = self.check_spin()
+                    tspin and print('Tspin detected')
                 for p in self.falling_piece.adj_shape():
                     self.set_pieces[int(p.y)][int(p.x)] = self.falling_piece.color # store colors in 2d array
+                
+                self.line_clear(tspin=tspin)
+
                 self.falling_piece = self.queued_pieces.pop(0)
                 self.can_hold = True
                 if len(self.queued_pieces) < 3:
@@ -200,8 +207,6 @@ class TetrisGame:
                     print('Lose', self.falling_piece, self.falling_piece.adj_shape())
                     print(self.score, 'points')
                     self.__init__()
-
-                self.line_clear()
         self.since_fall += 1
 
     def move_falling(self, dir):
@@ -257,28 +262,41 @@ class TetrisGame:
     def fall(self):
         return self.move_falling( vec(0, 1) )
 
-    def line_clear(self):
-        lines = 0
+    def line_clear(self, tspin = False):
+        num_lines = 0
         for i, row in enumerate(self.set_pieces):
             if all(row): # bool(None) == False, bool("color") == True
-                lines += 1
+                num_lines += 1
                 self.lines_to_lvl += 1
                 self.set_pieces.pop(i)
                 self.set_pieces.insert(0, [ None ] * BOARD_DIM[0])
-        if lines == 0:
+        if num_lines == 0:
             return
+        self.score += self.calc_score(num_lines, tspin)
+
+    def calc_score(self, lines, tspin):
+        spin_reward = 4 if tspin else 1
         if lines == 1:
-            self.score += 100 * (self.level + 1)
+            return 100 * (self.level + 1) * spin_reward
         elif lines == 2:
-            self.score += 300 * (self.level + 1)
+            return 300 * (self.level + 1) * spin_reward
         elif lines == 3:
-            self.score += 500 * (self.level + 1)
+            return 500 * (self.level + 1) * spin_reward
         elif lines == 4:
-            self.score += 800 * (self.level + 1)
+            return 800 * (self.level + 1) * spin_reward
         if self.lines_to_lvl >= 10:
             self.level += 1
             self.lines_to_lvl -= 10
-        
+
+    def check_spin(self):
+        test_piece = deepcopy(self.falling_piece)
+        spin = True
+        for shift in [vec(-1, 0), vec(0, -1), vec(1, 0)]:
+            test_piece.pos = deepcopy(self.falling_piece.pos)
+            test_piece.pos += shift
+            if not test_piece.check_collision(self.set_pieces):
+                spin = False
+        return spin
 
     def handle_inputs(self, inputs) -> None:
         if 'ESCAPE' in inputs:
