@@ -193,7 +193,6 @@ class TetrisGame:
                 tspin = False
                 if self.falling_piece.type == 'T':
                     tspin = self.check_spin()
-                    tspin and print('Tspin detected')
                 for p in self.falling_piece.adj_shape():
                     self.set_pieces[int(p.y)][int(p.x)] = self.falling_piece.color # store colors in 2d array
                 
@@ -220,6 +219,7 @@ class TetrisGame:
         return True
 
     def rotate_falling(self, rot):
+        '''
         tables = {
             (0, 1): [vec(0, 0), vec(-1, 0), vec(-1, -1), vec(0, 2), vec(-1, 2)],
             (1, -1): [vec(0, 0), vec(1, 0), vec(1, 1), vec(0, -2), vec(1, -2)],
@@ -246,6 +246,32 @@ class TetrisGame:
             tests = i_tables[(self.falling_piece.rotation, rot)]
         else:
             tests = tables[(self.falling_piece.rotation, rot)]
+        '''
+
+        tables = {
+            0: [vec(0,0)]*5, 
+            1: [vec(0,0), vec(1,0), vec(1,1), vec(0,-2), vec(1,-2)],
+            2: [vec(0,0)]*5,
+            3: [vec(0,0), vec(-1,0), vec(-1,1), vec(0,-2), vec(-1,-2)],
+        }
+
+        tables_i = {
+            0: [vec(0,0), vec(-1,0), vec(2,0), vec(-1,0), vec(2,0)],
+            1: [vec(-1,0), vec(0,0), vec(0,0), vec(0,-1), vec(0,2)],
+            2: [vec(-1,-1), vec(1,-1), vec(-2, -1), vec(1,0), vec(-2,0)],
+            3: [vec(0,-1), vec(0,-1), vec(0, -1), vec(0,1), vec(0,-2)],
+        }
+        
+
+        current_rot = self.falling_piece.rotation
+        use_table = tables_i if self.falling_piece.type == 'I' else tables
+        tests = [ v1 - v2 
+                 for v1, v2 in 
+                  zip(use_table[current_rot],
+                      use_table[(current_rot + rot) % 4])
+                ]
+
+
 
         test_piece = deepcopy(self.falling_piece)
         test_piece.rotate(rot)
@@ -273,6 +299,10 @@ class TetrisGame:
         if num_lines == 0:
             return
         self.score += self.calc_score(num_lines, tspin)
+        if self.lines_to_lvl >= 10:
+            self.level += 1
+            self.lines_to_lvl -= 10
+
 
     def calc_score(self, lines, tspin):
         spin_reward = 4 if tspin else 1
@@ -284,9 +314,6 @@ class TetrisGame:
             return 500 * (self.level + 1) * spin_reward
         elif lines == 4:
             return 800 * (self.level + 1) * spin_reward
-        if self.lines_to_lvl >= 10:
-            self.level += 1
-            self.lines_to_lvl -= 10
 
     def check_spin(self):
         test_piece = deepcopy(self.falling_piece)
