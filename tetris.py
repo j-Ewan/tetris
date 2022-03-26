@@ -7,10 +7,7 @@ import os
 
 # TODO List:
 # - lose screen
-# - highscore
 # - controls
-# - t-spin detection
-# - tidy up piece display 
 # - main screen?
 
 
@@ -18,6 +15,10 @@ FPS = 60
 
 BOARD_DIM = (10, 20)
 PIECE_DISP_SCALE = 0.75
+
+
+highscore = None
+
 
 KEYS = {32: 'SPACE', 13: 'RETURN', 113: 'Q', 119: 'W', 101: 'E', 114: 'R', 116: 'T', 121: 'Y', 117: 'U', 105: 'I', 111: 'O', 112: 'P', 97: 'A', 115: 'S', 100: 'D', 1073742053: 'RSHIFT', 102: 'F', 103: 'G', 104: 'H', 106: 'J', 107: 'K', 108: 'L', 122: 'Z', 120: 'X', 99: 'C', 118: 'V', 98: 'B', 110: 'N', 109: 'M', 49: '1', 50: '2', 51: '3', 52: '4', 53: '5', 54: '6', 55: '7', 56: '8', 57: '9', 48: '0', 44: ',', 46: '.', 59: ';', 47: '/', 39: "'", 91: '[', 93: ']', 92: '\\', 45: '-', 61: '=', 9: 'TAB', 8: 'BACKSPACE', 1073742049: 'LSHIFT', 96: '`', 1073741906: 'UP', 1073741905: 'DOWN', 1073741903: 'RIGHT', 1073741904: 'LEFT', 27: 'ESCAPE'}
 
@@ -77,7 +78,6 @@ class Piece:
         return [ square + self.pos for square in self.shape ]
 
     def draw(self, win: pygame.Surface, coords: vec) -> None:
-        # draw on board
         size = scale_factor()
         for square in self.shape:
             pos = (self.pos + square) * size + coords
@@ -161,9 +161,9 @@ class TetrisGame:
             y = center[1] - size * (BOARD_DIM[0]/2 + 2)
             self.held_piece.display(win, x, y, size * PIECE_DISP_SCALE, size * PIECE_DISP_SCALE)
 
-        for ind, piece in enumerate(self.queued_pieces[:3]):
+        for ind, piece in enumerate(self.queued_pieces[:5]):
             x = center[0] + size * (BOARD_DIM[0]/2 + 3)
-            y = center[1] - size * (BOARD_DIM[0]/2 + 2 - ind * 4)
+            y = center[1] - size * (BOARD_DIM[0]/2 + 2 - ind * 3) 
             piece.display(win, x, y, size * PIECE_DISP_SCALE, size * PIECE_DISP_SCALE)
 
         font_size = round( size, -1 ) if size > 5 else 1
@@ -171,15 +171,25 @@ class TetrisGame:
         score_rect = font.get_rect(str(self.score), size = font_size)
         
         x = ceil(center[0] - size * (BOARD_DIM[0]/2))
-        y = ceil(center[1] - size * (BOARD_DIM[0]) + 0.5)
+        y = ceil(center[1] - size * (BOARD_DIM[0] + 0.1))
         score_rect.bottomleft = (x, y)
 
         font.render_to(win, score_rect, str(self.score), "#FFFFFF")
 
+        if highscore is not None:
+            highscore_rect = font.get_rect('HI: ' + str(highscore), size = font_size)
+        
+            x = ceil(center[0] - size * (BOARD_DIM[0]/2))
+            y = ceil(center[1] - size * (BOARD_DIM[0] + 1.2))
+            highscore_rect.bottomleft = (x, y)
+
+            font.render_to(win, highscore_rect, 'HI: ' + str(highscore), "#FFFFFF")
+
+
         lvl_rect = font.get_rect(str(self.level), size = font_size)
         
         x = ceil(center[0] + size * (BOARD_DIM[0]/2))
-        y = ceil(center[1] - size * (BOARD_DIM[0]) + 0.5)
+        y = ceil(center[1] - size * (BOARD_DIM[0] + 0.1))
         lvl_rect.bottomright = (x, y)
 
         font.render_to(win, lvl_rect, str(self.level), "#FFFFFF")
@@ -200,11 +210,14 @@ class TetrisGame:
 
                 self.falling_piece = self.queued_pieces.pop(0)
                 self.can_hold = True
-                if len(self.queued_pieces) < 3:
+                if len(self.queued_pieces) < 6:
                     self.queued_pieces.extend(Piece.new_bag())
                 if self.falling_piece.check_collision(self.set_pieces):
                     print('Lose', self.falling_piece, self.falling_piece.adj_shape())
                     print(self.score, 'points')
+                    global highscore
+                    if highscore is None or self.score > highscore:
+                        highscore = self.score
                     self.__init__()
         self.since_fall += 1
 
@@ -412,7 +425,6 @@ while running:
     game.draw(win)
 
     pygame.display.update()
-
 
 pygame.display.quit()
 pygame.quit()
