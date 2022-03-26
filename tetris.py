@@ -77,12 +77,19 @@ class Piece:
     def adj_shape(self):
         return [ square + self.pos for square in self.shape ]
 
-    def draw(self, win: pygame.Surface, coords: vec) -> None:
+    def draw(self, win, coords):
         size = scale_factor()
         for square in self.shape:
             pos = (self.pos + square) * size + coords
 
             pygame.draw.rect(win, self.color, (*pos, size+1, size+1))
+
+    def ghost_draw(self, win, coords):
+        size = scale_factor()
+        for square in self.shape:
+            pos = (self.pos + square) * size + coords
+
+            pygame.draw.rect(win, self.color, (*pos, size+1, size+1), 1)
 
     def display(self, win: pygame.Surface, x: float, y: float, w: float, h: float) -> None:
         # display for side
@@ -145,6 +152,8 @@ class TetrisGame:
         center = board_center()
         board_dims = pygame.Rect(*center, *(x * size for x in BOARD_DIM))
         board_dims.center = center
+        
+        self.draw_ghost_falling(win)
 
         self.falling_piece.draw(win, vec(board_dims[:2]))
 
@@ -213,13 +222,27 @@ class TetrisGame:
                 if len(self.queued_pieces) < 6:
                     self.queued_pieces.extend(Piece.new_bag())
                 if self.falling_piece.check_collision(self.set_pieces):
-                    print('Lose', self.falling_piece, self.falling_piece.adj_shape())
+                    print('Lose')
                     print(self.score, 'points')
                     global highscore
                     if highscore is None or self.score > highscore:
                         highscore = self.score
                     self.__init__()
         self.since_fall += 1
+
+    def draw_ghost_falling(self, win):
+        ghost_piece = deepcopy(self.falling_piece)
+        while not ghost_piece.check_collision(self.set_pieces):
+            ghost_piece.pos += vec(0, 1)
+
+        ghost_piece.pos += vec(0, -1)
+
+        size = scale_factor()
+        center = board_center()
+        board_dims = pygame.Rect(*center, *(x * size for x in BOARD_DIM))
+        board_dims.center = center
+
+        ghost_piece.ghost_draw(win, vec(board_dims[:2]))
 
     def move_falling(self, dir):
         test_piece = deepcopy(self.falling_piece)
@@ -232,35 +255,6 @@ class TetrisGame:
         return True
 
     def rotate_falling(self, rot):
-        '''
-        tables = {
-            (0, 1): [vec(0, 0), vec(-1, 0), vec(-1, -1), vec(0, 2), vec(-1, 2)],
-            (1, -1): [vec(0, 0), vec(1, 0), vec(1, 1), vec(0, -2), vec(1, -2)],
-            (1, 1): [vec(0, 0), vec(1, 0), vec(1, 1), vec(0, -2), vec(1, -2)],
-            (2, -1): [vec(0, 0), vec(-1, 0), vec(-1, -1), vec(0, 2), vec(-1, 2)],
-            (2, 1): [vec(0, 0), vec(1, 0), vec(1, -1), vec(0, 2), vec(1, 2)],
-            (3, -1): [vec(0, 0), vec(-1, 0), vec(-1, 1), vec(0, -2), vec(-1, -2)],
-            (3, 1): [vec(0, 0), vec(-1, 0), vec(-1, 1), vec(0, -2), vec(-1, -2)],
-            (0, -1): [vec(0, 0), vec(1, 0), vec(1, -1), vec(0, 2), vec(1, 2)]
-        }
-
-        i_tables = {
-            (0, 1): [vec(0, 0), vec(-2, 0), vec(1, 0), vec(-2, 1), vec(1, -2)], #
-            (1, -1): [vec(0, 0), vec(2, 0), vec(-1, 0), vec(2, -1), vec(-1, 2)], #
-            (1, 1): [vec(0, 0), vec(-1, 0), vec(2, 0), vec(-1, -2), vec(2, 1)], #
-            (2, -1): [vec(0, 0), vec(1, 0), vec(-2, 0), vec(1, 2), vec(-2, -1)], #
-            (2, 1): [vec(0, 0), vec(2, 0), vec(-1, 0), vec(2, -1), vec(-1, 2)], # 
-            (3, -1): [vec(0, 0), vec(-2, 0), vec(1, 0), vec(-2, 1), vec(1, -2)],
-            (3, 1): [vec(0, 0), vec(1, 0), vec(-2, 0), vec(1, 2), vec(-2, -1)],
-            (0, -1): [vec(0, 0), vec(-1, 0), vec(2, 0), vec(-1, -2), vec(2, 1)]
-        }
-
-        if self.falling_piece.type == 'I':
-            tests = i_tables[(self.falling_piece.rotation, rot)]
-        else:
-            tests = tables[(self.falling_piece.rotation, rot)]
-        '''
-
         tables = {
             0: [vec(0,0)]*5, 
             1: [vec(0,0), vec(1,0), vec(1,1), vec(0,-2), vec(1,-2)],
@@ -377,7 +371,6 @@ class TetrisGame:
         self.falling_piece, self.held_piece = self.held_piece, self.falling_piece
         self.falling_piece.align_to_top()
 
-        
 
                 
 
