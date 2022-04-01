@@ -6,9 +6,7 @@ import random
 import os
 
 # TODO List:
-# - lose screen
-# - controls
-# - main screen?
+# - DAS
 
 
 FPS = 60
@@ -142,6 +140,8 @@ class TetrisGame:
         self.level = 0
         self.score = 0
         self.lines_to_lvl = 0
+        self.lock_delay = 0
+        self.ld_max = 3
 
 
         self.queued_pieces.extend(Piece.new_bag())
@@ -209,6 +209,10 @@ class TetrisGame:
         speed = 0.03 + 0.01 * self.level
         if self.since_fall % (1/speed) < 1:
             if not self.fall():    # piece lands
+                self.lock_delay += 1
+            else:
+                self.lock_delay = 0
+            if self.lock_delay >= self.ld_max:
                 tspin = False
                 if self.falling_piece.type == 'T':
                     tspin = self.check_spin()
@@ -337,7 +341,7 @@ class TetrisGame:
             self.paused = not self.paused
         if self.paused: return
         for inp in inputs:
-            if inp in ['C', 'LSHIFT', 'RSHIFT']:
+            if inp in ['LSHIFT', 'RSHIFT']:
                 self.hold()
             if inp in ['D', 'RIGHT']:
                 self.move_falling( vec(1, 0) )
@@ -347,13 +351,18 @@ class TetrisGame:
                 self.rotate_falling(-1)
             if inp in ['X', 'UP']:
                 self.rotate_falling(1)
+            if inp == 'C':
+                self.rotate_falling(2)
             if inp in ['S', 'DOWN']:
-                self.since_fall = 0
-                self.score += 1
+                if self.fall():
+                    self.since_fall = 1
+                    self.score += 1
             if inp == 'SPACE':
                 while self.fall():
                     self.score += 2
+                self.lock_delay = self.ld_max
                 self.since_fall = 0
+                self.step()
             if inp == 'R':
                 self.__init__()
             if inp == 'P':
@@ -383,7 +392,12 @@ pygame.display.init()
 pygame.font.init()
 
 win = pygame.display.set_mode((1000, 1000), pygame.RESIZABLE, vsync=1)
+
 pygame.display.set_caption('Tetris')
+
+logo_file = os.path.join(os.path.dirname(__file__), 'dt-logo.png')
+logo = pygame.image.load(logo_file)
+pygame.display.set_icon(logo)
 
 clock = pygame.time.Clock()
 
