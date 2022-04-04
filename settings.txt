@@ -1,0 +1,5 @@
+{
+    'FPS': 60,
+    'BOARD_DIM': (10, 20),
+    'PIECE_DISP_SCALE': 0.75,
+}

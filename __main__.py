@@ -7,7 +7,11 @@ import os
 
 # TODO List:
 # - DAS
+# - settings.txt
 
+SETTINGS_FILE = os.path.join(os.path.dirname(__file__), 'settings.txt')
+with open(SETTINGS_FILE) as f:
+    settings = eval(f.read())
 
 FPS = 60
 
@@ -17,13 +21,7 @@ PIECE_DISP_SCALE = 0.75
 
 highscore = None
 
-
-KEYS = {32: 'SPACE', 13: 'RETURN', 113: 'Q', 119: 'W', 101: 'E', 114: 'R', 116: 'T', 121: 'Y', 117: 'U', 105: 'I', 111: 'O', 112: 'P', 97: 'A', 115: 'S', 100: 'D', 1073742053: 'RSHIFT', 102: 'F', 103: 'G', 104: 'H', 106: 'J', 107: 'K', 108: 'L', 122: 'Z', 120: 'X', 99: 'C', 118: 'V', 98: 'B', 110: 'N', 109: 'M', 49: '1', 50: '2', 51: '3', 52: '4', 53: '5', 54: '6', 55: '7', 56: '8', 57: '9', 48: '0', 44: ',', 46: '.', 59: ';', 47: '/', 39: "'", 91: '[', 93: ']', 92: '\\', 45: '-', 61: '=', 9: 'TAB', 8: 'BACKSPACE', 1073742049: 'LSHIFT', 96: '`', 1073741906: 'UP', 1073741905: 'DOWN', 1073741903: 'RIGHT', 1073741904: 'LEFT', 27: 'ESCAPE'}
-
 FONT_FILE = os.path.join(os.path.dirname(__file__), 'arcadepix', 'ARCADEPI.TTF')
-
-def nums_to_keys(nums):
-    return [ KEYS[num] for num in nums if num in KEYS ]
 
 
 def scale_factor():
@@ -39,13 +37,13 @@ def board_center():
 
 class Piece:
     shapes = { # relative distance from center
-        'I': {'points': [ vec(-1, 0), vec(0, 0), vec(1, 0), vec(2, 0) ], 'center': vec(0.5, 0.5), 'color': '#00BFFF' },
-        'J': {'points': [ vec(-1, -1), vec(-1, 0), vec(0, 0), vec(1, 0) ], 'center': vec(0, 0), 'color': '#0000FF' },
-        'L': {'points': [ vec(-1, 0), vec(0, 0), vec(1, 0), vec(1, -1) ], 'center': vec(0, 0), 'color': '#FF7700' },
-        'O': {'points': [ vec(0, 0), vec(0, 1), vec(1, 0), vec(1, 1) ], 'center': vec(0.5, 0.5), 'color': '#FFFF00' },
-        'S': {'points': [ vec(-1, 0), vec(0, 0), vec(0, -1), vec(1, -1) ], 'center': vec(0, 0), 'color': '#00FF00' }, 
-        'T': {'points': [ vec(-1, 0), vec(0, 0), vec(0, -1), vec(1, 0) ], 'center': vec(0, 0), 'color': '#9900FF' },
-        'Z': {'points': [ vec(-1, -1), vec(0, -1), vec(0, 0), vec(1, 0) ], 'center': vec(0, 0), 'color': '#FF0000' }
+        'I': {'points': [ vec(-1, 0), vec(0, 0), vec(1, 0), vec(2, 0) ], 'color': '#00BFFF' },
+        'J': {'points': [ vec(-1, -1), vec(-1, 0), vec(0, 0), vec(1, 0) ], 'color': '#0000FF' },
+        'L': {'points': [ vec(-1, 0), vec(0, 0), vec(1, 0), vec(1, -1) ], 'color': '#FF7700' },
+        'O': {'points': [ vec(0, 0), vec(0, -1), vec(1, 0), vec(1, -1) ], 'color': '#FFFF00' },
+        'S': {'points': [ vec(-1, 0), vec(0, 0), vec(0, -1), vec(1, -1) ], 'color': '#00FF00' }, 
+        'T': {'points': [ vec(-1, 0), vec(0, 0), vec(0, -1), vec(1, 0) ], 'color': '#9900FF' },
+        'Z': {'points': [ vec(-1, -1), vec(0, -1), vec(0, 0), vec(1, 0) ], 'color': '#FF0000' }
     }
 
     @staticmethod
@@ -61,7 +59,6 @@ class Piece:
     def __init__(self, pos: vec, type: str) -> None:
         self.pos = pos
         self.shape = Piece.shapes[type]['points']
-        self.center = Piece.shapes[type]['center']
         self.color = Piece.shapes[type]['color']
         self.type = type
         self.rotation = 0
@@ -104,9 +101,7 @@ class Piece:
         self.rotation += dir
         self.rotation %= 4
         for i, p in enumerate(self.shape):
-            p -= self.center
             p = p.rotate(90 * dir)
-            p += self.center
             self.shape[i] = p
 
     def check_collision(self, pieces) -> bool:
@@ -272,10 +267,24 @@ class TetrisGame:
             2: [vec(-1,-1), vec(1,-1), vec(-2, -1), vec(1,0), vec(-2,0)],
             3: [vec(0,-1), vec(0,-1), vec(0, -1), vec(0,1), vec(0,-2)],
         }
+
+        tables_o = {
+            0: [vec(0, 0)],
+            1: [vec(0, 1)],
+            2: [vec(-1, 1)],
+            3: [vec(-1, 0)],
+        }
         
 
         current_rot = self.falling_piece.rotation
-        use_table = tables_i if self.falling_piece.type == 'I' else tables
+        use_table = None
+        if self.falling_piece.type == 'I':
+            use_table = tables_i
+        elif self.falling_piece.type == 'O':
+            use_table = tables_o
+        else:
+            use_table = tables
+
         tests = [ v1 - v2 
                  for v1, v2 in 
                   zip(use_table[current_rot],
@@ -337,35 +346,35 @@ class TetrisGame:
         return spin
 
     def handle_inputs(self, inputs) -> None:
-        if 'ESCAPE' in inputs:
+        if pygame.K_ESCAPE in inputs:
             self.paused = not self.paused
         if self.paused: return
         for inp in inputs:
-            if inp in ['LSHIFT', 'RSHIFT']:
+            if inp in [pygame.K_LSHIFT, pygame.K_RSHIFT]:
                 self.hold()
-            if inp in ['D', 'RIGHT']:
+            if inp in [pygame.K_d, pygame.K_RIGHT]:
                 self.move_falling( vec(1, 0) )
-            if inp in ['A', 'LEFT']:
+            if inp in [pygame.K_a, pygame.K_LEFT]:
                 self.move_falling( vec(-1, 0) )
-            if inp == 'Z':
+            if inp == pygame.K_z:
                 self.rotate_falling(-1)
-            if inp in ['X', 'UP']:
+            if inp in [pygame.K_x, pygame.K_UP]:
                 self.rotate_falling(1)
-            if inp == 'C':
+            if inp == pygame.K_c:
                 self.rotate_falling(2)
-            if inp in ['S', 'DOWN']:
+            if inp in [pygame.K_s, pygame.K_DOWN]:
                 if self.fall():
                     self.since_fall = 1
                     self.score += 1
-            if inp == 'SPACE':
+            if inp == pygame.K_SPACE:
                 while self.fall():
                     self.score += 2
                 self.lock_delay = self.ld_max
                 self.since_fall = 0
                 self.step()
-            if inp == 'R':
+            if inp == pygame.K_r:
                 self.__init__()
-            if inp == 'P':
+            if inp == pygame.K_p:
                 print(self.falling_piece)
 
     def hold(self) -> None:
@@ -424,7 +433,7 @@ while running:
                 inputs.append(inp)
 
 
-    game.handle_inputs(nums_to_keys(inputs))
+    game.handle_inputs(inputs)
 
     win.fill('#000000')
 
