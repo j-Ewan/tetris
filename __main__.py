@@ -293,7 +293,7 @@ class TetrisGame:
                 self.falling_piece = deepcopy(test_piece)
                 return True
         else:
-            print('Couldn\'t spin %s towards %s' % (self.falling_piece, rot))
+            pass
         return False
     
     def fall(self):
