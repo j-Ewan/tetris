@@ -1,3 +1,4 @@
+from tkinter import RIGHT
 import pygame
 from pygame.math import Vector2 as vec
 from math import ceil
@@ -13,10 +14,6 @@ SETTINGS_FILE = os.path.join(os.path.dirname(__file__), 'settings.txt')
 with open(SETTINGS_FILE) as f:
     settings = eval(f.read())
 
-FPS = 60
-
-BOARD_DIM = (10, 20)
-PIECE_DISP_SCALE = 0.75
 
 
 highscore = None
@@ -28,8 +25,8 @@ def scale_factor():
     '''Returns board scale factor'''
     win_size = tuple(x * 0.9 for x in pygame.display.get_window_size())
 
-    return min(win_size[0] / (BOARD_DIM[0] + 12 * PIECE_DISP_SCALE),
-               win_size[1] / (BOARD_DIM[1] + 2))
+    return min(win_size[0] / (settings['BOARD_DIM'][0] + 12 * settings['PIECE_DISP_SCALE']),
+               win_size[1] / (settings['BOARD_DIM'][1] + 2))
 
 def board_center():
     return vec(*(x/2 for x in pygame.display.get_window_size()),)
@@ -37,7 +34,7 @@ def board_center():
 
 class Piece:
     shapes = { # relative distance from center
-        'I': {'points': [ vec(-1, 0), vec(0, 0), vec(1, 0), vec(2, 0) ], 'color': '#00BFFF' },
+        'I': {'points': [ vec(-2, 0), vec(-1, 0), vec(0, 0), vec(1, 0) ], 'color': '#00BFFF' },
         'J': {'points': [ vec(-1, -1), vec(-1, 0), vec(0, 0), vec(1, 0) ], 'color': '#0000FF' },
         'L': {'points': [ vec(-1, 0), vec(0, 0), vec(1, 0), vec(1, -1) ], 'color': '#FF7700' },
         'O': {'points': [ vec(0, 0), vec(0, -1), vec(1, 0), vec(1, -1) ], 'color': '#FFFF00' },
@@ -106,7 +103,7 @@ class Piece:
 
     def check_collision(self, pieces) -> bool:
         for square in self.adj_shape():
-            if square[0] not in range(BOARD_DIM[0]) or square[1] not in range(BOARD_DIM[1]):
+            if square[0] not in range(settings['BOARD_DIM'][0]) or square[1] not in range(settings['BOARD_DIM'][1]):
                 return True
         if any( pieces[int(me.y)][int(me.x)] is not None for me in self.adj_shape() ):
             return True
@@ -114,7 +111,7 @@ class Piece:
 
     def align_to_top(self) -> None:
 
-        self.pos.x = (BOARD_DIM[0] >> 1) - 1
+        self.pos.x = (settings['BOARD_DIM'][0] >> 1) - 1
 
         highest_y = min( p.y for p in self.adj_shape() )
 
@@ -124,8 +121,8 @@ class Piece:
 
 class TetrisGame:
     def __init__(self) -> None:
-        self.size = BOARD_DIM
-        self.set_pieces = [ [ None ] * BOARD_DIM[0] for _ in range(BOARD_DIM[1]) ] # 2d array of colors
+        self.size = settings['BOARD_DIM']
+        self.set_pieces = [ [ None ] * settings['BOARD_DIM'][0] for _ in range(settings['BOARD_DIM'][1]) ] # 2d array of colors
         self.falling_piece: Piece = None
         self.queued_pieces = []
         self.held_piece: Piece = None
@@ -145,7 +142,7 @@ class TetrisGame:
     def draw(self, win: pygame.Surface) -> None:
         size = scale_factor()
         center = board_center()
-        board_dims = pygame.Rect(*center, *(x * size for x in BOARD_DIM))
+        board_dims = pygame.Rect(*center, *(x * size for x in settings['BOARD_DIM']))
         board_dims.center = center
         
         self.draw_ghost_falling(win)
@@ -161,21 +158,21 @@ class TetrisGame:
         pygame.draw.rect(win, 'Dark Gray', board_dims, 3)
 
         if self.held_piece is not None:
-            x = center[0] - size * (BOARD_DIM[0]/2 + 3)
-            y = center[1] - size * (BOARD_DIM[0]/2 + 2)
-            self.held_piece.display(win, x, y, size * PIECE_DISP_SCALE, size * PIECE_DISP_SCALE)
+            x = center[0] - size * (settings['BOARD_DIM'][0]/2 + 3)
+            y = center[1] - size * (settings['BOARD_DIM'][0]/2 + 2)
+            self.held_piece.display(win, x, y, size * settings['PIECE_DISP_SCALE'], size * settings['PIECE_DISP_SCALE'])
 
         for ind, piece in enumerate(self.queued_pieces[:5]):
-            x = center[0] + size * (BOARD_DIM[0]/2 + 3)
-            y = center[1] - size * (BOARD_DIM[0]/2 + 2 - ind * 3) 
-            piece.display(win, x, y, size * PIECE_DISP_SCALE, size * PIECE_DISP_SCALE)
+            x = center[0] + size * (settings['BOARD_DIM'][0]/2 + 3)
+            y = center[1] - size * (settings['BOARD_DIM'][0]/2 + 2 - ind * 3) 
+            piece.display(win, x, y, size * settings['PIECE_DISP_SCALE'], size * settings['PIECE_DISP_SCALE'])
 
         font_size = round( size, -1 ) if size > 5 else 1
         font = pygame.freetype.Font(FONT_FILE, font_size)
         score_rect = font.get_rect(str(self.score), size = font_size)
         
-        x = ceil(center[0] - size * (BOARD_DIM[0]/2))
-        y = ceil(center[1] - size * (BOARD_DIM[0] + 0.1))
+        x = ceil(center[0] - size * (settings['BOARD_DIM'][0]/2))
+        y = ceil(center[1] - size * (settings['BOARD_DIM'][0] + 0.1))
         score_rect.bottomleft = (x, y)
 
         font.render_to(win, score_rect, str(self.score), "#FFFFFF")
@@ -183,8 +180,8 @@ class TetrisGame:
         if highscore is not None:
             highscore_rect = font.get_rect('HI: ' + str(highscore), size = font_size)
         
-            x = ceil(center[0] - size * (BOARD_DIM[0]/2))
-            y = ceil(center[1] - size * (BOARD_DIM[0] + 1.2))
+            x = ceil(center[0] - size * (settings['BOARD_DIM'][0]/2))
+            y = ceil(center[1] - size * (settings['BOARD_DIM'][0] + 1.2))
             highscore_rect.bottomleft = (x, y)
 
             font.render_to(win, highscore_rect, 'HI: ' + str(highscore), "#FFFFFF")
@@ -192,8 +189,8 @@ class TetrisGame:
 
         lvl_rect = font.get_rect(str(self.level), size = font_size)
         
-        x = ceil(center[0] + size * (BOARD_DIM[0]/2))
-        y = ceil(center[1] - size * (BOARD_DIM[0] + 0.1))
+        x = ceil(center[0] + size * (settings['BOARD_DIM'][0]/2))
+        y = ceil(center[1] - size * (settings['BOARD_DIM'][0] + 0.1))
         lvl_rect.bottomright = (x, y)
 
         font.render_to(win, lvl_rect, str(self.level), "#FFFFFF")
@@ -238,7 +235,7 @@ class TetrisGame:
 
         size = scale_factor()
         center = board_center()
-        board_dims = pygame.Rect(*center, *(x * size for x in BOARD_DIM))
+        board_dims = pygame.Rect(*center, *(x * size for x in settings['BOARD_DIM']))
         board_dims.center = center
 
         ghost_piece.ghost_draw(win, vec(board_dims[:2]))
@@ -315,7 +312,7 @@ class TetrisGame:
                 num_lines += 1
                 self.lines_to_lvl += 1
                 self.set_pieces.pop(i)
-                self.set_pieces.insert(0, [ None ] * BOARD_DIM[0])
+                self.set_pieces.insert(0, [ None ] * settings['BOARD_DIM'][0])
         if num_lines == 0:
             return
         self.score += self.calc_score(num_lines, tspin)
@@ -350,29 +347,29 @@ class TetrisGame:
             self.paused = not self.paused
         if self.paused: return
         for inp in inputs:
-            if inp in [pygame.K_LSHIFT, pygame.K_RSHIFT]:
+            if inp in settings['CONTROLS']['HOLD']:
                 self.hold()
-            if inp in [pygame.K_d, pygame.K_RIGHT]:
+            if inp in settings['CONTROLS']['RIGHT']:
                 self.move_falling( vec(1, 0) )
-            if inp in [pygame.K_a, pygame.K_LEFT]:
+            if inp in settings['CONTROLS']['LEFT']:
                 self.move_falling( vec(-1, 0) )
-            if inp == pygame.K_z:
+            if inp in settings['CONTROLS']['CCW']:
                 self.rotate_falling(-1)
-            if inp in [pygame.K_x, pygame.K_UP]:
+            if inp in settings['CONTROLS']['CW']:
                 self.rotate_falling(1)
-            if inp == pygame.K_c:
+            if inp in settings['CONTROLS']['180']:
                 self.rotate_falling(2)
-            if inp in [pygame.K_s, pygame.K_DOWN]:
+            if inp in settings['CONTROLS']['SOFT']:
                 if self.fall():
                     self.since_fall = 1
                     self.score += 1
-            if inp == pygame.K_SPACE:
+            if inp in settings['CONTROLS']['HARD']:
                 while self.fall():
                     self.score += 2
                 self.lock_delay = self.ld_max
                 self.since_fall = 0
                 self.step()
-            if inp == pygame.K_r:
+            if inp in settings['CONTROLS']['RESET']:
                 self.__init__()
             if inp == pygame.K_p:
                 print(self.falling_piece)
@@ -417,12 +414,17 @@ pygame.display.update()
 
 clock.tick(1)
 
-
+held_inputs = {}
 running = True
 while running:
-    clock.tick(FPS)
+    clock.tick(settings['FPS'])
 
     inputs = []
+
+    for key in held_inputs.keys():
+        held_inputs[key] -= 1
+        if held_inputs[key] <= 0:
+            held_inputs[key] = settings['DAS']
     
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -430,8 +432,14 @@ while running:
         elif event.type == pygame.KEYDOWN:
             inp = event.key
             if inp is not None:
+                held_inputs[inp] = settings['DAS_DELAY']
                 inputs.append(inp)
+        elif event.type == pygame.KEYUP:
+            inp = event.key
+            if inp in held_inputs:
+                held_inputs.pop(inp)
 
+    inputs.extend( inp for inp, hold in held_inputs.items() if hold <= 1 )
 
     game.handle_inputs(inputs)
 

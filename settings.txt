@@ -2,4 +2,17 @@
     'FPS': 60,
     'BOARD_DIM': (10, 20),
     'PIECE_DISP_SCALE': 0.75,
+    'DAS': 4,
+    'DAS_DELAY': 15,
+    'CONTROLS': {
+        'LEFT': [pygame.K_LEFT],
+        'RIGHT': [pygame.K_RIGHT],
+        'CCW': [pygame.K_z],
+        'CW': [pygame.K_x],
+        '180': [pygame.K_c],
+        'HARD': [pygame.K_SPACE],
+        'SOFT': [pygame.K_DOWN],
+        'HOLD': [pygame.K_LSHIFT],
+        'RESET': [pygame.K_r],
+    }
 }
