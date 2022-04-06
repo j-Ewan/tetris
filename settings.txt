@@ -2,8 +2,8 @@
     'FPS': 60,
     'BOARD_DIM': (10, 20),
     'PIECE_DISP_SCALE': 0.75,
-    'DAS': 4,
-    'DAS_DELAY': 15,
+    'ARR': 2,
+    'DAS': 10,
     'CONTROLS': {
         'LEFT': [pygame.K_LEFT],
         'RIGHT': [pygame.K_RIGHT],

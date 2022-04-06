@@ -34,7 +34,7 @@ def board_center():
 
 class Piece:
     shapes = { # relative distance from center
-        'I': {'points': [ vec(-2, 0), vec(-1, 0), vec(0, 0), vec(1, 0) ], 'color': '#00BFFF' },
+        'I': {'points': [ vec(-1, 0), vec(0, 0), vec(1, 0), vec(2, 0) ], 'color': '#00BFFF' },
         'J': {'points': [ vec(-1, -1), vec(-1, 0), vec(0, 0), vec(1, 0) ], 'color': '#0000FF' },
         'L': {'points': [ vec(-1, 0), vec(0, 0), vec(1, 0), vec(1, -1) ], 'color': '#FF7700' },
         'O': {'points': [ vec(0, 0), vec(0, -1), vec(1, 0), vec(1, -1) ], 'color': '#FFFF00' },
@@ -49,7 +49,7 @@ class Piece:
         random.shuffle(pieces)
         bag = deepcopy([ Piece(vec(0, 0), type) for type in pieces ])
         # for item in bag: item.rotate(random.randint(0,3))
-        for item in bag: item.align_to_top()
+        for item in bag: item.spawn_align()
 
         return bag
 
@@ -103,13 +103,13 @@ class Piece:
 
     def check_collision(self, pieces) -> bool:
         for square in self.adj_shape():
-            if square[0] not in range(settings['BOARD_DIM'][0]) or square[1] not in range(settings['BOARD_DIM'][1]):
+            if square[0] not in range(settings['BOARD_DIM'][0]) or square[1] not in range(-4, settings['BOARD_DIM'][1]):
                 return True
-        if any( pieces[int(me.y)][int(me.x)] is not None for me in self.adj_shape() ):
+        if any( pieces[int(me.y)][int(me.x)] is not None if me.y >= 0 else False for me in self.adj_shape()):
             return True
         return False
 
-    def align_to_top(self) -> None:
+    def spawn_align(self) -> None:
 
         self.pos.x = (settings['BOARD_DIM'][0] >> 1) - 1
 
@@ -208,7 +208,11 @@ class TetrisGame:
                 tspin = False
                 if self.falling_piece.type == 'T':
                     tspin = self.check_spin()
+                lose = False
                 for p in self.falling_piece.adj_shape():
+                    if p.y < 0:
+                        lose = True
+                        break
                     self.set_pieces[int(p.y)][int(p.x)] = self.falling_piece.color # store colors in 2d array
                 
                 self.line_clear(tspin=tspin)
@@ -217,7 +221,7 @@ class TetrisGame:
                 self.can_hold = True
                 if len(self.queued_pieces) < 6:
                     self.queued_pieces.extend(Piece.new_bag())
-                if self.falling_piece.check_collision(self.set_pieces):
+                if self.falling_piece.check_collision(self.set_pieces) or lose:
                     print('Lose')
                     print(self.score, 'points')
                     global highscore
@@ -282,8 +286,7 @@ class TetrisGame:
         else:
             use_table = tables
 
-        tests = [ v1 - v2 
-                 for v1, v2 in 
+        tests = [ v1 - v2 for v1, v2 in 
                   zip(use_table[current_rot],
                       use_table[(current_rot + rot) % 4])
                 ]
@@ -298,6 +301,9 @@ class TetrisGame:
             if not test_piece.check_collision(self.set_pieces):
                 self.falling_piece = deepcopy(test_piece)
                 return True
+            elif test_piece.type == 'I':
+                print(pos, test_piece.adj_shape())
+            
         else:
             pass
         return False
@@ -384,7 +390,7 @@ class TetrisGame:
             return
 
         self.falling_piece, self.held_piece = self.held_piece, self.falling_piece
-        self.falling_piece.align_to_top()
+        self.falling_piece.spawn_align()
 
 
                 
@@ -424,7 +430,7 @@ while running:
     for key in held_inputs.keys():
         held_inputs[key] -= 1
         if held_inputs[key] <= 0:
-            held_inputs[key] = settings['DAS']
+            held_inputs[key] = settings['ARR']
     
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -432,7 +438,7 @@ while running:
         elif event.type == pygame.KEYDOWN:
             inp = event.key
             if inp is not None:
-                held_inputs[inp] = settings['DAS_DELAY']
+                held_inputs[inp] = settings['DAS']
                 inputs.append(inp)
         elif event.type == pygame.KEYUP:
             inp = event.key
