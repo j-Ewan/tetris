@@ -7,14 +7,13 @@ import random
 import os
 
 # TODO List:
-# - DAS
-# - settings.txt
+
 
 SETTINGS_FILE = os.path.join(os.path.dirname(__file__), 'settings.txt')
 with open(SETTINGS_FILE) as f:
     settings = eval(f.read())
 
-
+BOARD_DIM = (10, 20)
 
 highscore = None
 
@@ -25,8 +24,8 @@ def scale_factor():
     '''Returns board scale factor'''
     win_size = tuple(x * 0.9 for x in pygame.display.get_window_size())
 
-    return min(win_size[0] / (settings['BOARD_DIM'][0] + 12 * settings['PIECE_DISP_SCALE']),
-               win_size[1] / (settings['BOARD_DIM'][1] + 2))
+    return min(win_size[0] / (BOARD_DIM[0] + 12 * settings['PIECE_DISP_SCALE']),
+               win_size[1] / (BOARD_DIM[1] + 2))
 
 def board_center():
     return vec(*(x/2 for x in pygame.display.get_window_size()),)
@@ -103,7 +102,7 @@ class Piece:
 
     def check_collision(self, pieces) -> bool:
         for square in self.adj_shape():
-            if square[0] not in range(settings['BOARD_DIM'][0]) or square[1] not in range(-4, settings['BOARD_DIM'][1]):
+            if square[0] not in range(BOARD_DIM[0]) or square[1] not in range(-4, BOARD_DIM[1]):
                 return True
         if any( pieces[int(me.y)][int(me.x)] is not None if me.y >= 0 else False for me in self.adj_shape()):
             return True
@@ -111,7 +110,7 @@ class Piece:
 
     def spawn_align(self) -> None:
 
-        self.pos.x = (settings['BOARD_DIM'][0] >> 1) - 1
+        self.pos.x = (BOARD_DIM[0] >> 1) - 1
 
         highest_y = min( p.y for p in self.adj_shape() )
 
@@ -121,8 +120,8 @@ class Piece:
 
 class TetrisGame:
     def __init__(self) -> None:
-        self.size = settings['BOARD_DIM']
-        self.set_pieces = [ [ None ] * settings['BOARD_DIM'][0] for _ in range(settings['BOARD_DIM'][1]) ] # 2d array of colors
+        self.size = BOARD_DIM
+        self.set_pieces = [ [ None ] * BOARD_DIM[0] for _ in range(BOARD_DIM[1]) ] # 2d array of colors
         self.falling_piece: Piece = None
         self.queued_pieces = []
         self.held_piece: Piece = None
@@ -142,7 +141,7 @@ class TetrisGame:
     def draw(self, win: pygame.Surface) -> None:
         size = scale_factor()
         center = board_center()
-        board_dims = pygame.Rect(*center, *(x * size for x in settings['BOARD_DIM']))
+        board_dims = pygame.Rect(*center, *(x * size for x in BOARD_DIM))
         board_dims.center = center
         
         self.draw_ghost_falling(win)
@@ -158,21 +157,21 @@ class TetrisGame:
         pygame.draw.rect(win, 'Dark Gray', board_dims, 3)
 
         if self.held_piece is not None:
-            x = center[0] - size * (settings['BOARD_DIM'][0]/2 + 3)
-            y = center[1] - size * (settings['BOARD_DIM'][0]/2 + 2)
+            x = center[0] - size * (BOARD_DIM[0]/2 + 3)
+            y = center[1] - size * (BOARD_DIM[0]/2 + 2)
             self.held_piece.display(win, x, y, size * settings['PIECE_DISP_SCALE'], size * settings['PIECE_DISP_SCALE'])
 
         for ind, piece in enumerate(self.queued_pieces[:5]):
-            x = center[0] + size * (settings['BOARD_DIM'][0]/2 + 3)
-            y = center[1] - size * (settings['BOARD_DIM'][0]/2 + 2 - ind * 3) 
+            x = center[0] + size * (BOARD_DIM[0]/2 + 3)
+            y = center[1] - size * (BOARD_DIM[0]/2 + 2 - ind * 3) 
             piece.display(win, x, y, size * settings['PIECE_DISP_SCALE'], size * settings['PIECE_DISP_SCALE'])
 
         font_size = round( size, -1 ) if size > 5 else 1
         font = pygame.freetype.Font(FONT_FILE, font_size)
         score_rect = font.get_rect(str(self.score), size = font_size)
         
-        x = ceil(center[0] - size * (settings['BOARD_DIM'][0]/2))
-        y = ceil(center[1] - size * (settings['BOARD_DIM'][0] + 0.1))
+        x = ceil(center[0] - size * (BOARD_DIM[0]/2))
+        y = ceil(center[1] - size * (BOARD_DIM[0] + 0.1))
         score_rect.bottomleft = (x, y)
 
         font.render_to(win, score_rect, str(self.score), "#FFFFFF")
@@ -180,8 +179,8 @@ class TetrisGame:
         if highscore is not None:
             highscore_rect = font.get_rect('HI: ' + str(highscore), size = font_size)
         
-            x = ceil(center[0] - size * (settings['BOARD_DIM'][0]/2))
-            y = ceil(center[1] - size * (settings['BOARD_DIM'][0] + 1.2))
+            x = ceil(center[0] - size * (BOARD_DIM[0]/2))
+            y = ceil(center[1] - size * (BOARD_DIM[0] + 1.2))
             highscore_rect.bottomleft = (x, y)
 
             font.render_to(win, highscore_rect, 'HI: ' + str(highscore), "#FFFFFF")
@@ -189,8 +188,8 @@ class TetrisGame:
 
         lvl_rect = font.get_rect(str(self.level), size = font_size)
         
-        x = ceil(center[0] + size * (settings['BOARD_DIM'][0]/2))
-        y = ceil(center[1] - size * (settings['BOARD_DIM'][0] + 0.1))
+        x = ceil(center[0] + size * (BOARD_DIM[0]/2))
+        y = ceil(center[1] - size * (BOARD_DIM[0] + 0.1))
         lvl_rect.bottomright = (x, y)
 
         font.render_to(win, lvl_rect, str(self.level), "#FFFFFF")
@@ -239,7 +238,7 @@ class TetrisGame:
 
         size = scale_factor()
         center = board_center()
-        board_dims = pygame.Rect(*center, *(x * size for x in settings['BOARD_DIM']))
+        board_dims = pygame.Rect(*center, *(x * size for x in BOARD_DIM))
         board_dims.center = center
 
         ghost_piece.ghost_draw(win, vec(board_dims[:2]))
@@ -301,8 +300,6 @@ class TetrisGame:
             if not test_piece.check_collision(self.set_pieces):
                 self.falling_piece = deepcopy(test_piece)
                 return True
-            elif test_piece.type == 'I':
-                print(pos, test_piece.adj_shape())
             
         else:
             pass
@@ -318,7 +315,7 @@ class TetrisGame:
                 num_lines += 1
                 self.lines_to_lvl += 1
                 self.set_pieces.pop(i)
-                self.set_pieces.insert(0, [ None ] * settings['BOARD_DIM'][0])
+                self.set_pieces.insert(0, [ None ] * BOARD_DIM[0])
         if num_lines == 0:
             return
         self.score += self.calc_score(num_lines, tspin)
@@ -349,7 +346,7 @@ class TetrisGame:
         return spin
 
     def handle_inputs(self, inputs) -> None:
-        if pygame.K_ESCAPE in inputs:
+        if any(key in inputs for key in settings['CONTROLS']['PAUSE']):
             self.paused = not self.paused
         if self.paused: return
         for inp in inputs:
@@ -437,9 +434,8 @@ while running:
             running = False
         elif event.type == pygame.KEYDOWN:
             inp = event.key
-            if inp is not None:
-                held_inputs[inp] = settings['DAS']
-                inputs.append(inp)
+            held_inputs[inp] = settings['DAS']
+            inputs.append(inp)
         elif event.type == pygame.KEYUP:
             inp = event.key
             if inp in held_inputs:
