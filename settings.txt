@@ -4,7 +4,9 @@
     'ARR': 2,
     'DAS': 10,
     'NON_ARR': [
-
+        pygame.K_ESCAPE,
+        pygame.K_r,
+        pygame.K_SPACE,
     ],
     'CONTROLS': {
         'LEFT': [pygame.K_LEFT],

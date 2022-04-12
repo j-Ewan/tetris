@@ -1,4 +1,3 @@
-from tkinter import RIGHT
 import pygame
 from pygame.math import Vector2 as vec
 from math import ceil
@@ -350,6 +349,8 @@ class TetrisGame:
             self.paused = not self.paused
         if self.paused: return
         for inp in inputs:
+            if inp == pygame.K_TAB:
+                self.level += 1
             if inp in settings['CONTROLS']['HOLD']:
                 self.hold()
             if inp in settings['CONTROLS']['RIGHT']:
@@ -425,7 +426,8 @@ while running:
     inputs = []
 
     for key in held_inputs.keys():
-        held_inputs[key] -= 1
+        if key not in settings['NON_ARR']:
+            held_inputs[key] -= 1
         if held_inputs[key] <= 0:
             held_inputs[key] = settings['ARR']
     
