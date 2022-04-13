@@ -349,8 +349,6 @@ class TetrisGame:
             self.paused = not self.paused
         if self.paused: return
         for inp in inputs:
-            if inp == pygame.K_TAB:
-                self.level += 1
             if inp in settings['CONTROLS']['HOLD']:
                 self.hold()
             if inp in settings['CONTROLS']['RIGHT']:
