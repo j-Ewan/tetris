@@ -131,7 +131,7 @@ class TetrisGame:
         self.score = 0
         self.lines_to_lvl = 0
         self.lock_delay = 0
-        self.ld_max = 3
+        self.ld_max = 50
 
 
         self.queued_pieces.extend(Piece.new_bag())
@@ -202,7 +202,7 @@ class TetrisGame:
                 self.lock_delay += 1
             else:
                 self.lock_delay = 0
-            if self.lock_delay >= self.ld_max:
+            if self.lock_delay >= self.ld_max * speed:
                 tspin = False
                 if self.falling_piece.type == 'T':
                     tspin = self.check_spin()
@@ -368,9 +368,8 @@ class TetrisGame:
             if inp in settings['CONTROLS']['HARD']:
                 while self.fall():
                     self.score += 2
-                self.lock_delay = self.ld_max
+                self.lock_delay = self.ld_max * (0.03 + 0.01 * self.level)
                 self.since_fall = 0
-                self.step()
             if inp in settings['CONTROLS']['RESET']:
                 self.__init__()
             if inp == pygame.K_p:
