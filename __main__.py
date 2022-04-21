@@ -109,6 +109,8 @@ class Piece:
 
     def spawn_align(self) -> None:
 
+        self.rotate(-self.rotation)
+
         self.pos.x = (BOARD_DIM[0] >> 1) - 1
 
         highest_y = min( p.y for p in self.adj_shape() )
@@ -131,7 +133,7 @@ class TetrisGame:
         self.score = 0
         self.lines_to_lvl = 0
         self.lock_delay = 0
-        self.ld_max = 50
+        self.ld_max = 100
 
 
         self.queued_pieces.extend(Piece.new_bag())
@@ -385,7 +387,7 @@ class TetrisGame:
             return
 
         self.falling_piece, self.held_piece = self.held_piece, self.falling_piece
-        self.falling_piece.spawn_align()
+        self.held_piece.spawn_align()
 
 
                 

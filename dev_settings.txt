@@ -1,7 +1,7 @@
 {
     'FPS': 60,
     'PIECE_DISP_SCALE': 0.75,
-    'ARR': 2,
+    'ARR': 0,
     'DAS': 10,
     'NON_ARR': [
         pygame.K_ESCAPE,
@@ -11,12 +11,12 @@
     'CONTROLS': {
         'LEFT': [pygame.K_LEFT],
         'RIGHT': [pygame.K_RIGHT],
-        'CCW': [pygame.K_z],
-        'CW': [pygame.K_x, pygame.K_UP],
-        '180': [pygame.K_a],
+        'CCW': [pygame.K_x],
+        'CW': [pygame.K_c],
+        '180': [pygame.K_z],
         'HARD': [pygame.K_SPACE],
         'SOFT': [pygame.K_DOWN],
-        'HOLD': [pygame.K_LSHIFT, pygame.K_RSHIFT],
+        'HOLD': [pygame.K_LSHIFT],
         'RESET': [pygame.K_r],
         'PAUSE': [pygame.K_ESCAPE],
     }
