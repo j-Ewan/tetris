@@ -1,3 +1,4 @@
+from numpy import true_divide
 import pygame
 from pygame.math import Vector2 as vec
 from math import ceil
@@ -391,8 +392,50 @@ class TetrisGame:
 
 
                 
+class SDPC_Bot:
+    def __init__(self, game: TetrisGame):
+        self.game = game
 
+        self.bag_no = 0
+        self.path = None
 
+        self.placed_pieces = []
+    
+    def get_inputs(self):
+        if self.path is None:
+            if self.bag_no == 0:
+                if self.can_sdpc:
+                    if self.order('Z', 'S'):
+                        path = 'SDPC-Right'
+                    else:
+                        path = 'SDPC-Left'
+                else:
+                    path = 'Jigsaw'
+        if path == 'SDPC-Right' and self.bag_no == 0:
+            return self.sdpcr_bag_0()
+        return self.random_inputs()
+
+    def random_inputs(self):
+        inputs = []
+        for label, keys in settings['CONTROLS'].items():
+            if label not in ['PAUSE', 'RESTART']:
+                inputs.extend(keys)
+        return random.choice(inputs)
+
+    def sdpcr_bag_0(self):
+        falling = game.falling_piece
+        if falling.type == '0':
+            if falling.pos != 9:
+                return settings['CONTROLS']['RIGHT'][0]
+
+    def can_sdpc(self):
+        return all( self.order(type, 'O') for type in ['T', 'S', 'Z'] )
+
+    
+    def order(self, p1, p2):
+        upcoming = [self.game.falling_piece.type] + [self.game.held_piece.type if self.game.held_piece is not None else ''] + [piece.type for piece in self.game.queued_pieces]
+        return upcoming.index(p1) < upcoming.index(p2)
+    
 
 '''----------------MAIN----------------'''
 
@@ -417,32 +460,43 @@ pygame.display.update()
 
 clock.tick(1)
 
-held_inputs = {}
+
+AI = SDPC_Bot(game)
+
+AI_SPEED = 60
+since_input = 0
+
+# held_inputs = {}
 running = True
 while running:
     clock.tick(settings['FPS'])
 
     inputs = []
 
-    for key in held_inputs.keys():
-        if key not in settings['NON_ARR']:
-            held_inputs[key] -= 1
-        if held_inputs[key] <= 0:
-            held_inputs[key] = settings['ARR']
+    # for key in held_inputs.keys():
+    #     if key not in settings['NON_ARR']:
+    #         held_inputs[key] -= 1
+    #     if held_inputs[key] <= 0:
+    #         held_inputs[key] = settings['ARR']
     
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
-        elif event.type == pygame.KEYDOWN:
-            inp = event.key
-            held_inputs[inp] = settings['DAS']
-            inputs.append(inp)
-        elif event.type == pygame.KEYUP:
-            inp = event.key
-            if inp in held_inputs:
-                held_inputs.pop(inp)
+        # elif event.type == pygame.KEYDOWN:
+        #     inp = event.key
+        #     held_inputs[inp] = settings['DAS']
+        #     inputs.append(inp)
+        # elif event.type == pygame.KEYUP:
+        #     inp = event.key
+        #     if inp in held_inputs:
+        #         held_inputs.pop(inp)
 
-    inputs.extend( inp for inp, hold in held_inputs.items() if hold <= 1 )
+    # inputs.extend( inp for inp, hold in held_inputs.items() if hold <= 1 )
+
+    if since_input >= AI_SPEED:
+        inputs = AI.get_inputs()
+        since_input = 0
+    since_input += 1
 
     game.handle_inputs(inputs)
 
