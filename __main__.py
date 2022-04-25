@@ -348,6 +348,8 @@ class TetrisGame:
         return spin
 
     def handle_inputs(self, inputs) -> None:
+        if not inputs:
+            return
         if any(key in inputs for key in settings['CONTROLS']['PAUSE']):
             self.paused = not self.paused
         if self.paused: return
@@ -393,6 +395,7 @@ class TetrisGame:
 
                 
 class SDPC_Bot:
+    
     def __init__(self, game: TetrisGame):
         self.game = game
 
@@ -400,40 +403,191 @@ class SDPC_Bot:
         self.path = None
 
         self.placed_pieces = []
+
+        self.left = settings['CONTROLS']['LEFT'][0]
+        self.right = settings['CONTROLS']['RIGHT'][0]
+        self.cw = settings['CONTROLS']['CW'][0]
+        self.ccw = settings['CONTROLS']['CCW'][0]
+        self.s180 = settings['CONTROLS']['180'][0]
+        self.hard = settings['CONTROLS']['HARD'][0]
+        self.soft = settings['CONTROLS']['SOFT'][0]
+        self.hold = settings['CONTROLS']['HOLD'][0]
     
     def get_inputs(self):
         if self.path is None:
-            if self.bag_no == 0:
-                if self.can_sdpc:
-                    if self.order('Z', 'S'):
-                        path = 'SDPC-Right'
-                    else:
-                        path = 'SDPC-Left'
-                else:
-                    path = 'Jigsaw'
-        if path == 'SDPC-Right' and self.bag_no == 0:
-            return self.sdpcr_bag_0()
+            if self.order('Z', 'L'):
+                self.path = 'jb1z'
+            else:
+                self.path = 'jb1t'
+        if self.path == 'jb1t':
+            return self.jb1t()
+        if self.path == 'jb1z':
+            return self.jb1z()
         return self.random_inputs()
+
+    def jb1t(self):
+        piece = self.game.falling_piece
+        held = self.game.held_piece
+
+        if held is not None and held.type == 'Z' and 'T' in self.placed_pieces:
+            return [self.hold]
+        if held is not None and held.type == 'L' and len(self.placed_pieces) > 5:
+            return [self.hold]
+
+        if piece.type == 'T':
+            if piece.pos.x > 1:
+                return [self.left]
+            if piece.rotation % 4 != 1:
+                return [self.cw]
+            self.placed_pieces.append('T')
+            return [self.hard]
+        if piece.type == 'I':
+            if piece.rotation % 4 != 3:
+                return [self.ccw]
+            if piece.pos.x > 0:
+                return [self.left]
+            self.placed_pieces.append('I')
+            return [self.hard]
+        if piece.type == 'J':
+            if piece.pos.x < 8:
+                return [self.right]
+            if piece.rotation % 4 != 2:
+                return [self.s180]
+            self.placed_pieces.append('J')
+            return [self.hard]
+        if piece.type == 'L':
+            if len(self.placed_pieces) < 6:
+                return [self.hold]
+            if piece.pos.x > 4:
+                return [self.left]
+            if piece.rotation % 4 != 3:
+                return [self.ccw]
+            self.placed_pieces.append('L')
+            return [self.hard]
+        if piece.type == 'S':
+            if 'T' not in self.placed_pieces:
+                if piece.pos.x > 3:
+                    return [self.left]
+                self.placed_pieces.append('S')
+                return [self.hard]
+            else:
+                if piece.pos.y < 19:
+                    if piece.pos.x < 5:
+                        return [self.right]
+                    return [self.soft]
+                else:
+                    if piece.pos.x > 3:
+                        return [self.left]
+                    self.placed_pieces.append('S')
+                    return [self.hard]
+        if piece.type == 'O':
+            if piece.pos.x < 5:
+                return [self.right]
+            self.placed_pieces.append('O')
+            return [self.hard]
+        if piece.type == 'Z':
+            if 'T' not in self.placed_pieces:
+                return [self.hold]
+            if piece.pos.x > 2:
+                return [self.left]
+            self.placed_pieces.append('Z')
+            return [self.hard]
+
+        return self.random_inputs()
+
+    def jb1z(self):
+        piece = self.game.falling_piece
+        held = self.game.held_piece
+
+        if held is not None and held.type == 'L' and 'Z' in self.placed_pieces:
+            return [self.hold]
+        if held is not None and held.type == 'T' and len(self.placed_pieces) > 5:
+            return [self.hold]
+
+        if piece.type == 'T':
+            if len(self.placed_pieces) < 6:
+                return [self.hold]
+            if piece.pos.x > 4:
+                return [self.left]
+            if piece.rotation % 4 != 3:
+                return [self.ccw]
+            if piece.pos.y < 19:
+                if piece.pos.x < 5:
+                    return [self.right]
+                return [self.soft]
+            else:
+                if piece.pos.x > 3:
+                    return [self.left]
+                self.placed_pieces.append('T')
+                return [self.hard]
+        if piece.type == 'I':
+            if piece.rotation % 4 != 3:
+                return [self.ccw]
+            if piece.pos.x > 0:
+                return [self.left]
+            self.placed_pieces.append('I')
+            return [self.hard]
+        if piece.type == 'J':
+            if piece.pos.x < 8:
+                return [self.right]
+            if piece.rotation % 4 != 2:
+                return [self.s180]
+            self.placed_pieces.append('J')
+            return [self.hard]
+        if piece.type == 'L':
+            if len(self.placed_pieces) < 6:
+                return [self.hold]
+            if piece.pos.x > 4:
+                return [self.left]
+            if piece.rotation % 4 != 3:
+                return [self.ccw]
+            self.placed_pieces.append('L')
+            return [self.hard]
+        if piece.type == 'S':
+            if 'Z' not in self.placed_pieces:
+                if piece.pos.x > 3:
+                    return [self.left]
+                self.placed_pieces.append('S')
+                return [self.hard]
+            else:
+                if piece.pos.y < 18:
+                    if piece.pos.x < 4:
+                        return [self.right]
+                    return [self.soft]
+                else:
+                    if piece.pos.x > 3:
+                        return [self.left]
+                    self.placed_pieces.append('S')
+                    return [self.hard]
+        if piece.type == 'O':
+            if piece.pos.x < 5:
+                return [self.right]
+            self.placed_pieces.append('O')
+            return [self.hard]
+        if piece.type == 'Z':
+            if piece.pos.x > 2:
+                return [self.left]
+            if piece.rotation % 4 != 3:
+                return [self.ccw]
+            self.placed_pieces.append('Z')
+            return [self.hard]
+
+        return self.random_inputs()
+
 
     def random_inputs(self):
         inputs = []
         for label, keys in settings['CONTROLS'].items():
-            if label not in ['PAUSE', 'RESTART']:
+            if label not in ['PAUSE', 'RESET']:
                 inputs.extend(keys)
-        return random.choice(inputs)
-
-    def sdpcr_bag_0(self):
-        falling = game.falling_piece
-        if falling.type == '0':
-            if falling.pos != 9:
-                return settings['CONTROLS']['RIGHT'][0]
-
-    def can_sdpc(self):
-        return all( self.order(type, 'O') for type in ['T', 'S', 'Z'] )
-
+        return [random.choice(inputs)]
     
     def order(self, p1, p2):
         upcoming = [self.game.falling_piece.type] + [self.game.held_piece.type if self.game.held_piece is not None else ''] + [piece.type for piece in self.game.queued_pieces]
+        if p1 not in upcoming:
+            return True
+        if p2 not in upcoming:
+            return False
         return upcoming.index(p1) < upcoming.index(p2)
     
 
@@ -463,7 +617,7 @@ clock.tick(1)
 
 AI = SDPC_Bot(game)
 
-AI_SPEED = 60
+AI_SPEED = 5
 since_input = 0
 
 # held_inputs = {}
