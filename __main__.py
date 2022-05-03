@@ -131,9 +131,10 @@ class TetrisGame:
         self.can_hold = True
         self.level = 0
         self.score = 0
+        self.b2b = False
         self.lines_to_lvl = 0
         self.lock_delay = 0
-        self.ld_max = 100
+        self.ld_max = 150
 
 
         self.queued_pieces.extend(Piece.new_bag())
@@ -319,22 +320,30 @@ class TetrisGame:
                 self.set_pieces.insert(0, [ None ] * BOARD_DIM[0])
         if num_lines == 0:
             return
-        self.score += self.calc_score(num_lines, tspin)
+        self.b2b = tspin or num_lines == 4
+        pc = all( not any(line) for line in self.set_pieces)
+        self.score += self.calc_score(num_lines, tspin, pc)
         if self.lines_to_lvl >= 10:
             self.level += 1
             self.lines_to_lvl -= 10
 
 
-    def calc_score(self, lines, tspin):
-        spin_reward = 4 if tspin else 1
+    def calc_score(self, lines, tspin, pc):
+        
         if lines == 1:
-            return 100 * (self.level + 1) * spin_reward
+            points = 100 * (self.level + 1)
         elif lines == 2:
-            return 300 * (self.level + 1) * spin_reward
+            points = 300 * (self.level + 1)
         elif lines == 3:
-            return 500 * (self.level + 1) * spin_reward
+            points = 500 * (self.level + 1)
         elif lines == 4:
-            return 800 * (self.level + 1) * spin_reward
+            points = 800 * (self.level + 1)
+
+        points *= 4 if tspin else 1
+        points *= 1.5 if self.b2b else 1
+        points += 3000 if pc else 0
+
+        return round(points)
 
     def check_spin(self):
         test_piece = deepcopy(self.falling_piece)
