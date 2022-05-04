@@ -339,9 +339,9 @@ class TetrisGame:
         elif lines == 4:
             points = 800 * (self.level + 1)
 
+        points += 3000 if pc else 0
         points *= 4 if tspin else 1
         points *= 1.5 if self.b2b else 1
-        points += 3000 if pc else 0
 
         return round(points)
 
