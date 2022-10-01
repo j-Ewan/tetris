@@ -7,6 +7,11 @@ It got me into the tetris community though
 dependencies: pip install pygame
 
 
+default_settings.txt and dev_settings.txt are both presets, don't edit those
+settings.txt is the one that actually matters
+
+
+
 what's missing?
 180 kick table
 any sort of menu
